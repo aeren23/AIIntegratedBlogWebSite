@@ -1,7 +1,6 @@
-// src/ai/ai.provider.ts
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AiClient } from './interfaces/ai-client.interface';
+import { AiClient } from '../interfaces/ai-client.interface';
 
 @Injectable()
 export class OpenAiClient implements AiClient {

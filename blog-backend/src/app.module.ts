@@ -9,6 +9,8 @@ import { ArticlesModule } from './articles/articles.module';
 import { ImagesModule } from './images/images.module';
 import { CommentsModule } from './comments/comments.module';
 import { LogsModule } from './logs/logs.module';
+import { ConfigModule } from '@nestjs/config';
+import { AiModule } from './aiModule/ai.module';
 
 @Module({
   imports: [
@@ -19,6 +21,10 @@ import { LogsModule } from './logs/logs.module';
       synchronize: true,
     }),
     CommonModule,
+    ConfigModule.forRoot({
+      isGlobal: true, // Uygulamanın her yerinden erişilebilir olması için
+      envFilePath: '../.env', // Üst dizindeki .env dosyasını kullan
+    }),
     UsersModule,
     RolesModule,
     CategoriesModule,
@@ -27,6 +33,7 @@ import { LogsModule } from './logs/logs.module';
     ImagesModule,
     CommentsModule,
     LogsModule,
+    AiModule,
   ],
   controllers: [],
   providers: [],
