@@ -14,6 +14,31 @@ export class UserResponseDto {
   })
   username: string;
 
+  @ApiProperty({
+    description: 'Email address of the user',
+    example: 'john.doe@example.com',
+  })
+  email: string;
+
+  @ApiProperty({
+    description: 'Whether the user account is active',
+    example: true,
+  })
+  isActive: boolean;
+
+  @ApiProperty({
+    description: 'List of role names assigned to the user',
+    example: ['USER', 'AUTHOR'],
+    type: [String],
+  })
+  roles: string[];
+
+  @ApiProperty({
+    description: 'Timestamp when the user was created',
+    example: '2024-01-01T00:00:00.000Z',
+  })
+  createdAt: Date;
+
   @ApiPropertyOptional({
     description: 'User profile information',
     type: () => UserProfileResponseDto,

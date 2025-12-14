@@ -10,7 +10,7 @@ import { UpdateArticleDto } from './dto/update-article.dto';
 import { ArticleResponseDto } from './dto/article-response.dto';
 import { ServiceResponse } from '../common/service-response';
 import { PaginatedResult } from '../common/types/paginated-result.type';
-import { UserRole } from '../common/enums';
+import { UserRole } from '../auth/enums/user-role.enum';
 import { UserResponseDto } from '../users/dto/user-response.dto';
 import { CategoryResponseDto } from '../categories/dto/category-response.dto';
 import { TagResponseDto } from '../tags/dto/tag-response.dto';

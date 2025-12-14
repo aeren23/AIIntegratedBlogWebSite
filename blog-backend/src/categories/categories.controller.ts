@@ -18,9 +18,9 @@ import {
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '../common/enums';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../auth/enums/user-role.enum';
 
 @ApiTags('Categories')
 @Controller('categories')
@@ -121,7 +121,7 @@ export class CategoriesController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Create new category',
     description: 'Create a new category. Requires ADMIN or SUPERADMIN role.',
@@ -173,7 +173,7 @@ export class CategoriesController {
   @Put(':id')
   @UseGuards(JwtAuthGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Update category',
     description: 'Update an existing category. Requires ADMIN or SUPERADMIN role.',
@@ -226,7 +226,7 @@ export class CategoriesController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Delete category',
     description: 'Soft delete a category. Requires ADMIN or SUPERADMIN role.',

@@ -1,10 +1,13 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcryptjs';
 import { User } from '../users/entities/user.entity';
 import { UserProfile } from '../users/entities/user-profile.entity';
 import { Category } from '../categories/entities/category.entity';
 import { Tag } from '../tags/entities/tag.entity';
+import { Role } from '../roles/entities/role.entity';
+import { UserRole } from '../roles/entities/user-role.entity';
 
 @Injectable()
 export class SeedService implements OnModuleInit {
@@ -17,6 +20,10 @@ export class SeedService implements OnModuleInit {
     private readonly categoryRepository: Repository<Category>,
     @InjectRepository(Tag)
     private readonly tagRepository: Repository<Tag>,
+    @InjectRepository(Role)
+    private readonly roleRepository: Repository<Role>,
+    @InjectRepository(UserRole)
+    private readonly userRoleRepository: Repository<UserRole>,
   ) {}
 
   async onModuleInit() {
@@ -26,7 +33,10 @@ export class SeedService implements OnModuleInit {
   async seed() {
     console.log('🌱 Starting database seed...');
 
-    // Create test user with the mock-user-id
+    // Create roles first
+    await this.seedRoles();
+    
+    // Create test user and admin user
     await this.seedUsers();
     
     // Create categories
@@ -38,38 +48,135 @@ export class SeedService implements OnModuleInit {
     console.log('✅ Database seed completed!');
   }
 
+  private async seedRoles() {
+    const roleNames = ['USER', 'AUTHOR', 'ADMIN', 'SUPERADMIN'];
+
+    for (const roleName of roleNames) {
+      const existing = await this.roleRepository.findOne({
+        where: { name: roleName },
+      });
+
+      if (!existing) {
+        await this.roleRepository.save(
+          this.roleRepository.create({ name: roleName }),
+        );
+        console.log(`✅ Role created: ${roleName}`);
+      }
+    }
+  }
+
   private async seedUsers() {
-    const existingUser = await this.userRepository.findOne({
-      where: { id: 'mock-user-id' },
+    // Get roles for assignment
+    const userRole = await this.roleRepository.findOne({
+      where: { name: 'USER' },
+    });
+    const authorRole = await this.roleRepository.findOne({
+      where: { name: 'AUTHOR' },
+    });
+    const adminRole = await this.roleRepository.findOne({
+      where: { name: 'ADMIN' },
     });
 
-    if (!existingUser) {
-      console.log('Creating test user...');
-      
-      // Create user with specific ID to match mock JWT
-      const user = this.userRepository.create({
-        id: 'mock-user-id',
-        username: 'testauthor',
-        email: 'testauthor@example.com',
-        passwordHash: '$2b$10$mockhashedpassword', // Not a real hash, just for testing
+    // Seed Admin User
+    const existingAdmin = await this.userRepository.findOne({
+      where: { username: 'admin' },
+    });
+
+    if (!existingAdmin) {
+      console.log('Creating admin user...');
+
+      // Hash password: "admin123"
+      const passwordHash = await bcrypt.hash('Admin123!', 10);
+
+      const admin = this.userRepository.create({
+        username: 'admin',
+        email: 'admin@example.com',
+        passwordHash,
         isActive: true,
       });
-      
-      await this.userRepository.save(user);
 
-      // Create profile for the user
-      const profile = this.userProfileRepository.create({
-        userId: user.id,
+      await this.userRepository.save(admin);
+
+      // Create profile
+      const adminProfile = this.userProfileRepository.create({
+        userId: admin.id,
+        displayName: 'System Administrator',
+        bio: 'System administrator account for user management.',
+        profileImageUrl: null,
+      });
+
+      await this.userProfileRepository.save(adminProfile);
+
+      // Assign ADMIN role
+      if (adminRole) {
+        await this.userRoleRepository.save(
+          this.userRoleRepository.create({
+            userId: admin.id,
+            roleId: adminRole.id,
+          }),
+        );
+      }
+
+      console.log(
+        '✅ Admin user created: admin / Admin123! (ADMIN role assigned)',
+      );
+    } else {
+      console.log('Admin user already exists');
+    }
+
+    // Seed Test Author User
+    const existingAuthor = await this.userRepository.findOne({
+      where: { username: 'testauthor' },
+    });
+
+    if (!existingAuthor) {
+      console.log('Creating test author user...');
+
+      // Hash password: "password123"
+      const passwordHash = await bcrypt.hash('password123', 10);
+
+      const author = this.userRepository.create({
+        username: 'testauthor',
+        email: 'testauthor@example.com',
+        passwordHash,
+        isActive: true,
+      });
+
+      await this.userRepository.save(author);
+
+      // Create profile
+      const authorProfile = this.userProfileRepository.create({
+        userId: author.id,
         displayName: 'Test Author',
         bio: 'This is a test author account for development.',
         profileImageUrl: null,
       });
-      
-      await this.userProfileRepository.save(profile);
-      
-      console.log('✅ Test user created: mock-user-id (testauthor)');
+
+      await this.userProfileRepository.save(authorProfile);
+
+      // Assign USER and AUTHOR roles
+      if (userRole) {
+        await this.userRoleRepository.save(
+          this.userRoleRepository.create({
+            userId: author.id,
+            roleId: userRole.id,
+          }),
+        );
+      }
+      if (authorRole) {
+        await this.userRoleRepository.save(
+          this.userRoleRepository.create({
+            userId: author.id,
+            roleId: authorRole.id,
+          }),
+        );
+      }
+
+      console.log(
+        '✅ Test author created: testauthor / password123 (USER, AUTHOR roles assigned)',
+      );
     } else {
-      console.log('Test user already exists');
+      console.log('Test author already exists');
     }
   }
 

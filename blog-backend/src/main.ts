@@ -29,9 +29,12 @@ async function bootstrap() {
       },
       'JWT-auth',
     )
+    .addTag('Auth', 'Authentication endpoints (register, login, me)')
     .addTag('Articles', 'Article management endpoints')
     .addTag('Categories', 'Category management for article organization')
     .addTag('Tags', 'Tag management for article classification')
+    .addTag('Users', 'User management endpoints (ADMIN only)')
+    .addTag('Roles', 'Role management endpoints')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

@@ -1,2 +1,2 @@
 export * from './log-action.enum';
-export * from './user-role.enum';
+// UserRole moved to auth/enums/user-role.enum.ts

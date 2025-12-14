@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CommonModule } from './common/common.module';
+import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
 import { CategoriesModule } from './categories/categories.module';
@@ -22,6 +23,7 @@ import { DatabaseModule } from './database/database.module';
       synchronize: true,
     }),
     CommonModule,
+    AuthModule,
     ConfigModule.forRoot({
       isGlobal: true, // Uygulamanın her yerinden erişilebilir olması için
       envFilePath: '../.env', // Üst dizindeki .env dosyasını kullan

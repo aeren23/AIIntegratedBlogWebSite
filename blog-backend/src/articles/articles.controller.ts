@@ -24,15 +24,15 @@ import { ArticlesService } from './articles.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { ArticleResponseDto } from './dto/article-response.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '../common/enums';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../auth/enums/user-role.enum';
 
 @ApiTags('Articles')
 @Controller('articles')
 @UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 export class ArticlesController {
   constructor(private readonly articlesService: ArticlesService) {}
 
@@ -280,7 +280,7 @@ export class ArticlesController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @Roles(UserRole.AUTHOR, UserRole.ADMIN, UserRole.SUPERADMIN)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Create new article',
     description: 'Create a new article. Requires AUTHOR, ADMIN, or SUPERADMIN role.',
@@ -352,7 +352,7 @@ export class ArticlesController {
   @Put(':id')
   @UseGuards(JwtAuthGuard)
   @Roles(UserRole.AUTHOR, UserRole.ADMIN, UserRole.SUPERADMIN)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Update article',
     description: 'Update an existing article. Authors can only update their own articles. Admins can update any article.',
@@ -439,7 +439,7 @@ export class ArticlesController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @Roles(UserRole.AUTHOR, UserRole.ADMIN, UserRole.SUPERADMIN)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Soft delete article',
     description: 'Soft delete an article (sets isDeleted flag). Authors can only delete their own articles. Admins can delete any article.',
@@ -505,7 +505,7 @@ export class ArticlesController {
   @Delete(':id/hard')
   @UseGuards(JwtAuthGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Hard delete article (permanent)',
     description: 'Permanently delete an article from the database. Only ADMIN and SUPERADMIN roles can perform this action.',
