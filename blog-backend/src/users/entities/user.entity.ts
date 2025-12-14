@@ -1,9 +1,10 @@
-import { Entity, Column, OneToMany, Index } from 'typeorm';
+import { Entity, Column, OneToMany, OneToOne, Index } from 'typeorm';
 import { BaseEntity } from '../../common/base/base.entity';
 import { UserRole } from '../../roles/entities/user-role.entity';
 import { Article } from '../../articles/entities/article.entity';
 import { Comment } from '../../comments/entities/comment.entity';
 import { Log } from '../../logs/entities/log.entity';
+import { UserProfile } from './user-profile.entity';
 
 @Entity('users')
 export class User extends BaseEntity {
@@ -32,4 +33,7 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Log, (log) => log.user)
   logs: Log[];
+
+  @OneToOne(() => UserProfile, (profile) => profile.user)
+  profile: UserProfile;
 }

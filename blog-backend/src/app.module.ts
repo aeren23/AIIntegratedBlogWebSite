@@ -11,6 +11,7 @@ import { CommentsModule } from './comments/comments.module';
 import { LogsModule } from './logs/logs.module';
 import { ConfigModule } from '@nestjs/config';
 import { AiModule } from './aiModule/ai.module';
+import { DatabaseModule } from './database/database.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { AiModule } from './aiModule/ai.module';
     CommentsModule,
     LogsModule,
     AiModule,
+    DatabaseModule,
   ],
   controllers: [],
   providers: [],
