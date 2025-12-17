@@ -8,6 +8,8 @@ import { UserProfile } from '../users/entities/user-profile.entity';
 import { LoginDto, RegisterDto, AuthResponseDto } from './dto/auth.dto';
 import { ServiceResponse } from '../common/service-response';
 import { JwtPayload } from './strategies/jwt.strategy';
+import { LogService } from '../logs/log.service';
+import { LogAction } from '../common/enums/log-action.enum';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +19,7 @@ export class AuthService {
     @InjectRepository(UserProfile)
     private readonly userProfileRepository: Repository<UserProfile>,
     private readonly jwtService: JwtService,
+    private readonly logService: LogService,
   ) {}
 
   /**
@@ -63,6 +66,13 @@ export class AuthService {
       // Generate JWT token
       const token = this.generateToken(user);
 
+      void this.logService.createLog({
+        userId: user.id,
+        action: LogAction.CREATE,
+        entityType: 'User',
+        entityId: user.id,
+        description: 'User registered',
+      });
       return ServiceResponse.ok({
         accessToken: token,
         user: {
@@ -117,6 +127,13 @@ export class AuthService {
     // Generate JWT token
     const token = this.generateToken(user, roles);
 
+    void this.logService.createLog({
+      userId: user.id,
+      action: LogAction.LOGIN,
+      entityType: 'User',
+      entityId: user.id,
+      description: 'User logged in',
+    });
     return ServiceResponse.ok({
       accessToken: token,
       user: {

@@ -10,10 +10,12 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { LogsModule } from '../logs/logs.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, UserProfile]),
+    LogsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     // JwtModule.registerAsync allows us to inject ConfigService
     JwtModule.registerAsync({
