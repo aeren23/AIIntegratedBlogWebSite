@@ -1,2 +1,162 @@
 @import "tailwindcss";
+@source "../.flowbite-react/class-list.json";
 @import "flowbite-react/plugin/tailwindcss";
+
+/* ============================================
+   BLOG PROJECT - DESIGN SYSTEM v2.0
+   ============================================
+   
+   🎨 FRESH & MODERN COLOR PALETTE
+   
+   Primary Color: Teal/Cyan (Fresh, Modern, Professional)
+   - Primary: teal-500 (#14B8A6) / teal-600 (#0D9488)
+   - Primary Hover: teal-600 (#0D9488) / teal-700 (#0F766E)
+   - Primary Light: teal-50 (#F0FDFA)
+   - Gradient: from-teal-500 to-cyan-600
+   
+   Accent Color: Emerald (Success, Growth)
+   - Accent: emerald-400 (#34D399)
+   - Accent Hover: emerald-500 (#10B981)
+   
+   Neutral Colors (Soft & Readable):
+   - Background: gradient from-slate-50 via-white to-teal-50/30
+   - Surface: white with /80 or /90 opacity
+   - Text Primary: gray-800 (#1F2937) - NOT black!
+   - Text Secondary: gray-600 (#4B5563)
+   - Text Muted: gray-500 (#6B7280)
+   - Border: gray-100 (#F3F4F6) - very light
+   
+   Role-Based Accent Colors:
+   - Admin: violet-500 (#8B5CF6)
+   - Author: amber-500 (#F59E0B)
+   - User: sky-500 (#0EA5E9)
+   
+   Status Colors:
+   - Success: emerald-500 (#10B981)
+   - Warning: amber-400 (#FBBF24)
+   - Error: red-500 (#EF4444)
+   - Info: cyan-500 (#06B6D4)
+   
+   ============================================
+   
+   💡 USAGE GUIDELINES:
+   
+   Buttons:
+   - Primary: color="teal" with shadow-md shadow-teal-500/20
+   - Secondary: color="light" with border-gray-200 text-gray-700
+   
+   Cards:
+   - border-gray-100 bg-white/90 shadow-lg shadow-gray-200/50
+   - Hover: hover:shadow-md hover:-translate-y-0.5
+   
+   Text:
+   - Headings: text-gray-800 font-bold
+   - Body: text-gray-600
+   - Muted: text-gray-500
+   - Links: text-teal-600 hover:text-teal-700
+   
+   Badges:
+   - bg-teal-100 text-teal-700 (or other pastel combos)
+   
+   Icons:
+   - Use gradient backgrounds: bg-gradient-to-br from-teal-100 to-cyan-100
+   - Icon color: text-teal-600
+   
+   ============================================ */
+
+@layer base {
+  :root {
+    /* Primary Brand Colors - Teal */
+    --color-primary: #14B8A6;
+    --color-primary-hover: #0D9488;
+    --color-primary-light: #F0FDFA;
+    
+    /* Accent Colors */
+    --color-accent: #34D399;
+    --color-accent-hover: #10B981;
+    
+    /* Neutral Colors - Softer */
+    --color-bg: #FAFAFA;
+    --color-surface: #FFFFFF;
+    --color-text: #1F2937;
+    --color-text-secondary: #4B5563;
+    --color-text-muted: #6B7280;
+    --color-border: #F3F4F6;
+    
+    /* Role Colors */
+    --color-admin: #8B5CF6;
+    --color-author: #F59E0B;
+    --color-user: #0EA5E9;
+  }
+  
+  body {
+    @apply bg-gray-50 text-gray-800 antialiased;
+  }
+}
+
+@layer components {
+  /* Primary Button Style */
+  .btn-primary {
+    @apply bg-teal-500 text-white hover:bg-teal-600 focus:ring-teal-400 shadow-md shadow-teal-500/20;
+  }
+  
+  /* Secondary Button Style */
+  .btn-secondary {
+    @apply bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 focus:ring-teal-400;
+  }
+  
+  /* Card Style */
+  .card-elevated {
+    @apply bg-white/90 rounded-xl border border-gray-100 shadow-lg shadow-gray-200/50 backdrop-blur-sm;
+  }
+  
+  /* Card Hover Effect */
+  .card-interactive {
+    @apply transition-all hover:shadow-md hover:-translate-y-0.5;
+  }
+  
+  /* Navigation Link Active State */
+  .nav-link-active {
+    @apply text-teal-600 font-medium;
+  }
+  
+  /* Gradient Text */
+  .text-gradient {
+    @apply bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent;
+  }
+}
+
+/* ============================================
+   FLOWBITE OVERRIDES - Remove dark card backgrounds
+   ============================================ */
+
+/* Kill ALL dark mode backgrounds on cards and inputs */
+.dark\:bg-gray-800,
+.dark\:bg-gray-700,
+.dark\:border-gray-700,
+.dark\:border-gray-600 {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+
+/* Force Card backgrounds to white */
+[data-testid="flowbite-card"],
+.rounded-lg.border.bg-white {
+  background-color: #ffffff !important;
+  border-color: #f3f4f6 !important;
+}
+
+/* TextInput dark mode fix */
+input.dark\:bg-gray-700,
+input.dark\:border-gray-600 {
+  background-color: #f9fafb !important;
+  border-color: #d1d5db !important;
+  color: #1f2937 !important;
+}
+
+/* Make sure text stays readable */
+.dark\:text-white,
+.dark\:text-gray-400,
+.dark\:text-gray-300 {
+  color: inherit !important;
+}

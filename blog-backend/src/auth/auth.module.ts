@@ -4,7 +4,6 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from '../users/entities/user.entity';
-import { UserProfile } from '../users/entities/user-profile.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
@@ -14,7 +13,7 @@ import { LogsModule } from '../logs/logs.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, UserProfile]),
+    TypeOrmModule.forFeature([User]),
     LogsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     // JwtModule.registerAsync allows us to inject ConfigService

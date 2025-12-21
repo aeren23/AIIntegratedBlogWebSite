@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import { User } from './entities/user.entity';
 import { UserRole as UserRoleEntity } from '../roles/entities/user-role.entity';
 import { Role } from '../roles/entities/role.entity';
@@ -8,6 +10,9 @@ import { UserResponseDto } from './dto/user-response.dto';
 import { UserProfileResponseDto } from './dto/user-profile-response.dto';
 import { ServiceResponse } from '../common/service-response';
 import { UserRole } from '../auth/enums/user-role.enum';
+import { UserProfile } from './entities/user-profile.entity';
+import { LogService } from '../logs/log.service';
+import { LogAction } from '../common/enums/log-action.enum';
 
 @Injectable()
 export class UsersService {
@@ -18,6 +23,9 @@ export class UsersService {
     private readonly userRoleRepository: Repository<UserRoleEntity>,
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
+    @InjectRepository(UserProfile)
+    private readonly userProfileRepository: Repository<UserProfile>,
+    private readonly logService: LogService,
   ) {}
 
   /**
@@ -271,6 +279,36 @@ export class UsersService {
   }
 
   /**
+   * Reactivate a user (ADMIN only)
+   * Sets isActive to true
+   */
+  async activateUser(userId: string): Promise<ServiceResponse<void>> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        return ServiceResponse.fail('User not found');
+      }
+
+      if (user.isActive) {
+        return ServiceResponse.fail('User is already active');
+      }
+
+      user.isActive = true;
+      await this.userRepository.save(user);
+
+      console.log(`User ${userId} reactivated`);
+
+      return ServiceResponse.ok(null);
+    } catch (error) {
+      console.error('Activate user error:', error);
+      return ServiceResponse.fail('Failed to activate user');
+    }
+  }
+
+  /**
    * Delete own account (soft delete - authenticated user)
    * Sets isActive to false
    */
@@ -375,23 +413,81 @@ export class UsersService {
         }
       }
 
-      // Delete UserRole records first (foreign key constraint)
-      await this.userRoleRepository.delete({ userId: user.id });
+      // Delete avatar file before removing records
+      const avatarPath = this.resolveAvatarAbsolutePath(
+        user.profile?.profileImageUrl,
+      );
+      if (avatarPath) {
+        await this.deleteFileIfExists(avatarPath);
+      }
 
       // Delete user profile if exists
       if (user.profile) {
-        await this.userRepository.manager.remove(user.profile);
+        await this.userProfileRepository.remove(user.profile);
       }
+
+      // Delete UserRole records first (foreign key constraint)
+      await this.userRoleRepository.delete({ userId: user.id });
 
       // Hard delete user
       await this.userRepository.remove(user);
 
+      const roleNames =
+        user.userRoles?.map((ur) => ur.role?.name).filter(Boolean) ?? [];
+
+      void this.logService.createLog({
+        userId: requesterId,
+        action: LogAction.DELETE,
+        entityType: 'User',
+        entityId: user.id,
+        description: 'User permanently deleted',
+        metadata: {
+          deletedUserId: user.id,
+          username: user.username,
+          email: user.email,
+          roles: roleNames,
+          hadProfile: Boolean(user.profile),
+          hadAvatar: Boolean(user.profile?.profileImageUrl),
+        },
+      });
       console.log(`User ${userId} permanently deleted by admin ${requesterId}`);
 
       return ServiceResponse.ok(null);
     } catch (error) {
       console.error('Hard delete user error:', error);
       return ServiceResponse.fail('Failed to permanently delete user');
+    }
+  }
+
+  private resolveAvatarAbsolutePath(url?: string | null): string | null {
+    if (!url) {
+      return null;
+    }
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return null;
+    }
+
+    const normalizedUrl = url.startsWith('/') ? url.slice(1) : url;
+    const safePath = path.normalize(normalizedUrl);
+
+    if (safePath.startsWith('..')) {
+      return null;
+    }
+
+    return path.join(process.cwd(), safePath);
+  }
+
+  private async deleteFileIfExists(filePath: string): Promise<void> {
+    try {
+      await fs.unlink(filePath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        console.error('Failed to delete avatar file:', {
+          filePath,
+          message: (error as Error).message,
+        });
+      }
     }
   }
 

@@ -6,6 +6,9 @@ import {
   Param,
   Body,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  Put,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,6 +17,7 @@ import {
   ApiBearerAuth,
   ApiParam,
   ApiBody,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -22,13 +26,22 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../auth/enums/user-role.enum';
 import { AssignRoleDto } from './dto/assign-role.dto';
+import { UserProfileService } from './user-profile.service';
+import { CreateUserProfileDto } from './dto/create-user-profile.dto';
+import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import type { Multer } from 'multer';
 
 @ApiTags('Users')
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth('JWT-auth')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly userProfileService: UserProfileService,
+  ) {}
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
@@ -112,6 +125,109 @@ export class UsersController {
   })
   async getCurrentUser(@CurrentUser() user: { id: string }) {
     const result = await this.usersService.getCurrentUser(user.id);
+    return {
+      success: result.success,
+      data: result.value,
+      errorMessage: result.errorMessage,
+    };
+  }
+
+  @Get('me/profile')
+  @ApiOperation({
+    summary: 'Get my profile',
+    description: 'Retrieve the profile of the currently authenticated user. Returns null if no profile is created yet.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile retrieved successfully',
+  })
+  async getMyProfile(@CurrentUser() user: { id: string }) {
+    const result = await this.userProfileService.getMyProfile(user.id);
+    return {
+      success: result.success,
+      data: result.value,
+      errorMessage: result.errorMessage,
+    };
+  }
+
+  @Post('me/profile')
+  @ApiOperation({
+    summary: 'Create my profile',
+    description:
+      'Create a profile for the authenticated user. User ID is taken from JWT and must not be provided by the client.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile created successfully',
+  })
+  async createMyProfile(
+    @CurrentUser() user: { id: string },
+    @Body() body: CreateUserProfileDto,
+  ) {
+    const result = await this.userProfileService.createMyProfile(
+      user.id,
+      body,
+    );
+    return {
+      success: result.success,
+      data: result.value,
+      errorMessage: result.errorMessage,
+    };
+  }
+
+  @Put('me/profile')
+  @ApiOperation({
+    summary: 'Update my profile',
+    description: 'Update the profile of the authenticated user.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile updated successfully',
+  })
+  async updateMyProfile(
+    @CurrentUser() user: { id: string },
+    @Body() body: UpdateUserProfileDto,
+  ) {
+    const result = await this.userProfileService.updateMyProfile(
+      user.id,
+      body,
+    );
+    return {
+      success: result.success,
+      data: result.value,
+      errorMessage: result.errorMessage,
+    };
+  }
+
+  @Post('me/profile/avatar')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Upload or replace avatar',
+    description:
+      'Upload an avatar image for the authenticated user. Accepts JPEG, PNG, WEBP up to 2 MB.',
+  })
+  @ApiBody({
+    description: 'Avatar file upload',
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async uploadAvatar(
+    @CurrentUser() user: { id: string },
+    @UploadedFile() file: Multer.File,
+  ) {
+    const result = await this.userProfileService.uploadAvatar(user.id, file);
     return {
       success: result.success,
       data: result.value,
@@ -396,6 +512,56 @@ export class UsersController {
   })
   async deactivateUser(@Param('id') userId: string) {
     const result = await this.usersService.deactivateUser(userId);
+    return {
+      success: result.success,
+      data: result.value,
+      errorMessage: result.errorMessage,
+    };
+  }
+
+  @Put(':id/activate')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({
+    summary: 'Activate user (ADMIN only)',
+    description: 'Reactivate a user account by setting isActive to true.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'User UUID',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User activated successfully',
+    schema: {
+      example: {
+        success: true,
+        data: null,
+        errorMessage: null,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'User already active',
+    schema: {
+      example: {
+        success: false,
+        data: null,
+        errorMessage: 'User is already active',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
+  async activateUser(@Param('id') userId: string) {
+    const result = await this.usersService.activateUser(userId);
     return {
       success: result.success,
       data: result.value,

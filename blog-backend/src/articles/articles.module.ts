@@ -6,9 +6,14 @@ import { Category } from '../categories/entities/category.entity';
 import { User } from '../users/entities/user.entity';
 import { ArticlesService } from './articles.service';
 import { ArticlesController } from './articles.controller';
+import { Image } from '../images/entities/image.entity';
+import { LogsModule } from '../logs/logs.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Article, ArticleTag, Category, User])],
+  imports: [
+    TypeOrmModule.forFeature([Article, ArticleTag, Category, User, Image]),
+    LogsModule,
+  ],
   controllers: [ArticlesController],
   providers: [ArticlesService],
   exports: [TypeOrmModule, ArticlesService],

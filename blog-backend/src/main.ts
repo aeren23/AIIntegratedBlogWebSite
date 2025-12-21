@@ -2,9 +2,25 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Enable CORS for frontend
+  app.enableCors({
+    origin: ['http://localhost:5173', 'http://localhost:3001'], // Vite default port
+    credentials: true,
+  });
+
+  // Set global API prefix
+  app.setGlobalPrefix('api');
+
+  // Serve static files (avatars)
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
+  });
 
   // Enable validation
   app.useGlobalPipes(
@@ -38,10 +54,10 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api/docs', app, document);
 
   await app.listen(process.env.PORT ?? 3000);
   console.log(`🚀 Application is running on: http://localhost:${process.env.PORT ?? 3000}`);
-  console.log(`📚 Swagger documentation: http://localhost:${process.env.PORT ?? 3000}/api`);
+  console.log(`📚 Swagger documentation: http://localhost:${process.env.PORT ?? 3000}/api/docs`);
 }
 bootstrap();

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import { Article } from './entities/article.entity';
 import { ArticleTag } from './entities/article-tag.entity';
 import { Category } from '../categories/entities/category.entity';
@@ -15,6 +17,9 @@ import { UserResponseDto } from '../users/dto/user-response.dto';
 import { CategoryResponseDto } from '../categories/dto/category-response.dto';
 import { TagResponseDto } from '../tags/dto/tag-response.dto';
 import { UserProfileResponseDto } from '../users/dto/user-profile-response.dto';
+import { Image } from '../images/entities/image.entity';
+import { LogService } from '../logs/log.service';
+import { LogAction } from '../common/enums/log-action.enum';
 
 @Injectable()
 export class ArticlesService {
@@ -27,6 +32,9 @@ export class ArticlesService {
     private readonly categoryRepository: Repository<Category>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Image)
+    private readonly imageRepository: Repository<Image>,
+    private readonly logService: LogService,
   ) {}
 
   /**
@@ -368,14 +376,35 @@ export class ArticlesService {
     }
 
     try {
-      // TODO: Implement image cleanup before hard delete
-      // - Query all images associated with this article
-      // - Delete physical files from storage
-      // - Delete image records from database
+      const images = await this.imageRepository.find({
+        where: { articleId },
+      });
+
+      for (const image of images) {
+        const candidatePaths = this.buildImageFilePaths(image);
+        for (const filePath of candidatePaths) {
+          await this.deleteFileIfExists(filePath);
+        }
+      }
 
       await this.articleRepository.remove(article);
+
+      void this.logService.createLog({
+        action: LogAction.DELETE,
+        entityType: 'Article',
+        entityId: article.id,
+        description: 'Article permanently deleted',
+        metadata: {
+          requesterRole,
+          slug: article.slug,
+          authorId: article.authorId,
+          categoryId: article.categoryId,
+          hadImages: images.length > 0,
+        },
+      });
       return ServiceResponse.ok(null);
     } catch (error) {
+      console.error('Hard delete article error:', error);
       return ServiceResponse.fail('Failed to permanently delete article');
     }
   }
@@ -515,5 +544,53 @@ export class ArticlesService {
     }
 
     return dto;
+  }
+
+  private buildImageFilePaths(image: Image): string[] {
+    const paths: (string | null)[] = [];
+
+    const urlPath = this.resolveImageAbsolutePath(image.url);
+    if (urlPath) {
+      paths.push(urlPath);
+    }
+
+    if (image.filename) {
+      const safeFilename = path.basename(image.filename);
+      paths.push(path.join(process.cwd(), 'uploads', 'articles', safeFilename));
+    }
+
+    return Array.from(new Set(paths.filter(Boolean))) as string[];
+  }
+
+  private resolveImageAbsolutePath(url?: string | null): string | null {
+    if (!url) {
+      return null;
+    }
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return null;
+    }
+
+    const normalizedUrl = url.startsWith('/') ? url.slice(1) : url;
+    const safePath = path.normalize(normalizedUrl);
+
+    if (safePath.startsWith('..')) {
+      return null;
+    }
+
+    return path.join(process.cwd(), safePath);
+  }
+
+  private async deleteFileIfExists(filePath: string): Promise<void> {
+    try {
+      await fs.unlink(filePath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        console.error('Failed to delete image file:', {
+          filePath,
+          message: (error as Error).message,
+        });
+      }
+    }
   }
 }

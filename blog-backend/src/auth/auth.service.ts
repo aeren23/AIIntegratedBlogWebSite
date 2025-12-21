@@ -4,7 +4,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { User } from '../users/entities/user.entity';
-import { UserProfile } from '../users/entities/user-profile.entity';
 import { LoginDto, RegisterDto, AuthResponseDto } from './dto/auth.dto';
 import { ServiceResponse } from '../common/service-response';
 import { JwtPayload } from './strategies/jwt.strategy';
@@ -16,8 +15,6 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(UserProfile)
-    private readonly userProfileRepository: Repository<UserProfile>,
     private readonly jwtService: JwtService,
     private readonly logService: LogService,
   ) {}
@@ -55,13 +52,6 @@ export class AuthService {
         isActive: true,
       });
       await this.userRepository.save(user);
-
-      // Create default profile
-      const profile = this.userProfileRepository.create({
-        userId: user.id,
-        displayName: dto.username,
-      });
-      await this.userProfileRepository.save(profile);
 
       // Generate JWT token
       const token = this.generateToken(user);
