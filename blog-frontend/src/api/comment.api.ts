@@ -38,3 +38,10 @@ export const deleteComment = async (commentId: string) => {
   const { data } = await api.delete<ApiResponse<null>>(`/comments/${commentId}`);
   return unwrapApiResponse(data);
 };
+
+export const hardDeleteComment = async (commentId: string) => {
+  const { data } = await api.delete<ApiResponse<null>>(
+    `/comments/${commentId}/permanent`,
+  );
+  return unwrapApiResponse(data);
+};

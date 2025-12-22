@@ -35,6 +35,18 @@ export class ArticleResponseDto {
   isPublished: boolean;
 
   @ApiProperty({
+    description: 'Whether the article is soft deleted',
+    example: false,
+  })
+  isDeleted: boolean;
+
+  @ApiProperty({
+    description: 'Total number of comments attached to the article',
+    example: 12,
+  })
+  commentsCount: number;
+
+  @ApiProperty({
     description: 'Timestamp when the article was created',
     example: '2023-12-14T10:30:00.000Z',
   })

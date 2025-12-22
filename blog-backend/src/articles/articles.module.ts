@@ -7,11 +7,12 @@ import { User } from '../users/entities/user.entity';
 import { ArticlesService } from './articles.service';
 import { ArticlesController } from './articles.controller';
 import { Image } from '../images/entities/image.entity';
+import { Tag } from '../tags/entities/tag.entity';
 import { LogsModule } from '../logs/logs.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Article, ArticleTag, Category, User, Image]),
+    TypeOrmModule.forFeature([Article, ArticleTag, Category, User, Image, Tag]),
     LogsModule,
   ],
   controllers: [ArticlesController],

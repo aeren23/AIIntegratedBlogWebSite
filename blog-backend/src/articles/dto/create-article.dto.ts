@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  ArrayUnique,
+  IsArray,
+  IsBoolean,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateArticleDto {
   @ApiProperty({
@@ -42,4 +50,14 @@ export class CreateArticleDto {
   @IsBoolean()
   @IsOptional()
   isPublished?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Tag IDs to attach to the article',
+    example: ['987fcdeb-51a2-43f7-9876-543210fedcba'],
+  })
+  @IsArray()
+  @ArrayUnique()
+  @IsUUID('4', { each: true })
+  @IsOptional()
+  tagIds?: string[];
 }

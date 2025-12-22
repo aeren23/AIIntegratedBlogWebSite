@@ -8,6 +8,8 @@ import {
   Param,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
   ParseIntPipe,
   ParseBoolPipe,
   DefaultValuePipe,
@@ -19,6 +21,8 @@ import {
   ApiQuery,
   ApiBearerAuth,
   ApiParam,
+  ApiBody,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { ArticlesService } from './articles.service';
 import { CreateArticleDto } from './dto/create-article.dto';
@@ -28,6 +32,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/enums/user-role.enum';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import type { Multer } from 'multer';
 
 @ApiTags('Articles')
 @Controller('articles')
@@ -189,6 +196,44 @@ export class ArticlesController {
       isAscending,
       includeDeleted: canIncludeDeleted,
     });
+
+    return {
+      success: result.success,
+      data: result.value,
+      errorMessage: result.errorMessage,
+    };
+  }
+
+  @Get('id/:id')
+  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.AUTHOR, UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Get article by ID',
+    description:
+      'Retrieve a single article by ID. Authors can access their own articles, admins can access any article.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'Article UUID',
+    example: 'a1b2c3d4-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved article',
+    type: ArticleResponseDto,
+  })
+  async getArticleById(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string; roles: string[] },
+  ) {
+    const requesterRole = this.resolveRequesterRole(user?.roles);
+    const result = await this.articlesService.getArticleById(
+      id,
+      requesterRole,
+      user?.id,
+    );
 
     return {
       success: result.success,
@@ -419,12 +464,54 @@ export class ArticlesController {
     @Body() updateArticleDto: UpdateArticleDto,
     @CurrentUser() user: { id: string; roles: string[] },
   ) {
-    // Get user role - for now, use first role from array
-    const userRole = (user.roles[0] as UserRole) || UserRole.USER;
+    const userRole = this.resolveRequesterRole(user?.roles);
 
     const result = await this.articlesService.updateArticle(
       id,
       updateArticleDto,
+      userRole,
+      user.id,
+    );
+
+    return {
+      success: result.success,
+      data: result.value,
+      errorMessage: result.errorMessage,
+    };
+  }
+
+  @Put(':id/restore')
+  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.AUTHOR, UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Restore article',
+    description: 'Restore a soft-deleted article. Authors can restore their own articles, admins can restore any article.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'Article UUID',
+    example: 'a1b2c3d4-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Article successfully restored',
+    schema: {
+      example: {
+        success: true,
+        data: null,
+        errorMessage: null,
+      },
+    },
+  })
+  async restoreArticle(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string; roles: string[] },
+  ) {
+    const userRole = this.resolveRequesterRole(user?.roles);
+    const result = await this.articlesService.restoreArticle(
+      id,
       userRole,
       user.id,
     );
@@ -487,7 +574,7 @@ export class ArticlesController {
     @Param('id') id: string,
     @CurrentUser() user: { id: string; roles: string[] },
   ) {
-    const userRole = (user.roles[0] as UserRole) || UserRole.USER;
+    const userRole = this.resolveRequesterRole(user?.roles);
 
     const result = await this.articlesService.softDeleteArticle(
       id,
@@ -553,7 +640,7 @@ export class ArticlesController {
     @Param('id') id: string,
     @CurrentUser() user: { id: string; roles: string[] },
   ) {
-    const userRole = (user.roles[0] as UserRole) || UserRole.ADMIN;
+    const userRole = this.resolveRequesterRole(user?.roles);
 
     const result = await this.articlesService.hardDeleteArticle(id, userRole);
 
@@ -562,5 +649,84 @@ export class ArticlesController {
       data: result.value,
       errorMessage: result.errorMessage,
     };
+  }
+
+  @Post(':id/images')
+  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.AUTHOR, UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Upload image for article',
+    description:
+      'Upload an image for an article. Authors can upload only for their own articles. Admins can upload for any article.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Article UUID',
+    example: 'a1b2c3d4-e89b-12d3-a456-426614174000',
+  })
+  @ApiBody({
+    description: 'Image upload payload',
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Image uploaded',
+    schema: {
+      example: {
+        success: true,
+        data: {
+          imageId: 'img-uuid',
+          url: '/uploads/articles/article-uuid/file.jpg',
+        },
+        errorMessage: null,
+      },
+    },
+  })
+  async uploadArticleImage(
+    @Param('id') id: string,
+    @UploadedFile() file: Multer.File,
+    @CurrentUser() user: { id: string; roles: string[] },
+  ) {
+    const requesterRole = this.resolveRequesterRole(user?.roles);
+    const result = await this.articlesService.uploadArticleImage(
+      id,
+      file,
+      requesterRole,
+      user.id,
+    );
+
+    return {
+      success: result.success,
+      data: result.value,
+      errorMessage: result.errorMessage,
+    };
+  }
+
+  private resolveRequesterRole(roles?: string[]): UserRole {
+    if (roles?.includes(UserRole.SUPERADMIN)) {
+      return UserRole.SUPERADMIN;
+    }
+    if (roles?.includes(UserRole.ADMIN)) {
+      return UserRole.ADMIN;
+    }
+    if (roles?.includes(UserRole.AUTHOR)) {
+      return UserRole.AUTHOR;
+    }
+    return UserRole.USER;
   }
 }

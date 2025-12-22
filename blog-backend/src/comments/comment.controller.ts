@@ -272,6 +272,47 @@ export class CommentController {
     };
   }
 
+  @Delete('comments/:commentId/permanent')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Hard delete a comment (ADMIN only)',
+    description: 'Permanently delete a comment. Only ADMIN and SUPERADMIN can access.',
+  })
+  @ApiParam({
+    name: 'commentId',
+    description: 'UUID of the comment',
+    example: 'c1c1c1c1-1111-1111-1111-111111111111',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Comment permanently deleted',
+    schema: {
+      example: {
+        success: true,
+        data: null,
+        errorMessage: null,
+      },
+    },
+  })
+  async hardDeleteComment(
+    @Param('commentId') commentId: string,
+    @CurrentUser() user: { id: string; roles: string[] },
+  ) {
+    const requesterRole = this.resolveRequesterRole(user?.roles);
+    const result = await this.commentService.hardDeleteComment(
+      commentId,
+      requesterRole,
+      user.id,
+    );
+
+    return {
+      success: result.success,
+      data: result.value,
+      errorMessage: result.errorMessage,
+    };
+  }
+
   private resolveRequesterRole(roles?: string[]): UserRole {
     if (roles?.includes(UserRole.SUPERADMIN)) {
       return UserRole.SUPERADMIN;
@@ -285,4 +326,3 @@ export class CommentController {
     return UserRole.USER;
   }
 }
-

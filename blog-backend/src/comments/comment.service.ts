@@ -241,6 +241,47 @@ export class CommentService {
     }
   }
 
+  async hardDeleteComment(
+    commentId: string,
+    requesterRole: UserRole,
+    userId: string,
+  ): Promise<ServiceResponse<void>> {
+    if (!this.isAdminRole(requesterRole)) {
+      return ServiceResponse.fail('Access denied: ADMIN only');
+    }
+
+    try {
+      const comment = await this.commentRepository.findOne({
+        where: { id: commentId },
+      });
+
+      if (!comment) {
+        return ServiceResponse.fail('Comment not found');
+      }
+
+      await this.commentRepository.remove(comment);
+
+      void this.logService.createLog({
+        userId,
+        action: LogAction.DELETE,
+        entityType: 'Comment',
+        entityId: commentId,
+        description: 'Comment permanently deleted',
+        metadata: {
+          articleId: comment.articleId,
+          commentAuthorId: comment.userId,
+          parentCommentId: comment.parentCommentId,
+          requesterRole,
+        },
+      });
+
+      return ServiceResponse.ok(null);
+    } catch (error) {
+      console.error('Hard delete comment error:', error);
+      return ServiceResponse.fail('Failed to permanently delete comment');
+    }
+  }
+
   private isAdminRole(role: UserRole): boolean {
     return role === UserRole.ADMIN || role === UserRole.SUPERADMIN;
   }

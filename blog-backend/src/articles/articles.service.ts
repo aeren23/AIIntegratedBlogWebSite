@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { randomUUID } from 'crypto';
 import { Article } from './entities/article.entity';
 import { ArticleTag } from './entities/article-tag.entity';
 import { Category } from '../categories/entities/category.entity';
@@ -20,6 +21,8 @@ import { UserProfileResponseDto } from '../users/dto/user-profile-response.dto';
 import { Image } from '../images/entities/image.entity';
 import { LogService } from '../logs/log.service';
 import { LogAction } from '../common/enums/log-action.enum';
+import type { Multer } from 'multer';
+import { Tag } from '../tags/entities/tag.entity';
 
 @Injectable()
 export class ArticlesService {
@@ -34,6 +37,8 @@ export class ArticlesService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Image)
     private readonly imageRepository: Repository<Image>,
+    @InjectRepository(Tag)
+    private readonly tagRepository: Repository<Tag>,
     private readonly logService: LogService,
   ) {}
 
@@ -75,6 +80,10 @@ export class ArticlesService {
       .leftJoinAndSelect('article.category', 'category')
       .leftJoinAndSelect('article.articleTags', 'articleTags')
       .leftJoinAndSelect('articleTags.tag', 'tag');
+    queryBuilder.loadRelationCountAndMap(
+      'article.commentsCount',
+      'article.comments',
+    );
 
     // Apply role-based visibility rules
     this.applyVisibilityRules(
@@ -143,6 +152,10 @@ export class ArticlesService {
       .leftJoinAndSelect('article.articleTags', 'articleTags')
       .leftJoinAndSelect('articleTags.tag', 'tag')
       .where('article.slug = :slug', { slug });
+    queryBuilder.loadRelationCountAndMap(
+      'article.commentsCount',
+      'article.comments',
+    );
 
     // Apply visibility rules
     this.applyVisibilityRules(queryBuilder, requesterRole, requesterUserId, false);
@@ -151,6 +164,37 @@ export class ArticlesService {
 
     if (!article) {
       return ServiceResponse.fail('Article not found or access denied');
+    }
+
+    return ServiceResponse.ok(this.mapToArticleResponseDto(article));
+  }
+
+  /**
+   * Get single article by ID (author/admin only)
+   */
+  async getArticleById(
+    articleId: string,
+    requesterRole: UserRole,
+    requesterUserId?: string,
+  ): Promise<ServiceResponse<ArticleResponseDto>> {
+    const article = await this.articleRepository
+      .createQueryBuilder('article')
+      .leftJoinAndSelect('article.author', 'author')
+      .leftJoinAndSelect('author.profile', 'profile')
+      .leftJoinAndSelect('article.category', 'category')
+      .leftJoinAndSelect('article.articleTags', 'articleTags')
+      .leftJoinAndSelect('articleTags.tag', 'tag')
+      .where('article.id = :articleId', { articleId })
+      .loadRelationCountAndMap('article.commentsCount', 'article.comments')
+      .getOne();
+
+    if (!article) {
+      return ServiceResponse.fail('Article not found');
+    }
+
+    const canView = this.canModifyArticle(article, requesterRole, requesterUserId ?? '');
+    if (!canView) {
+      return ServiceResponse.fail('Access denied: You cannot view this article');
     }
 
     return ServiceResponse.ok(this.mapToArticleResponseDto(article));
@@ -197,15 +241,27 @@ export class ArticlesService {
       }
     }
 
+    const normalizedTagIds = this.normalizeTagIds(dto.tagIds);
+    const tagValidation = await this.validateTagIds(normalizedTagIds);
+    if (!tagValidation.success) {
+      return ServiceResponse.fail(tagValidation.errorMessage ?? 'Invalid tag IDs');
+    }
+
+    const { tagIds: _tagIds, ...articlePayload } = dto;
+
     // Create article entity
     const article = this.articleRepository.create({
-      ...dto,
+      ...articlePayload,
       authorId,
       createdById: authorId,
     });
 
     try {
       const savedArticle = await this.articleRepository.save(article);
+
+      if (normalizedTagIds.length > 0) {
+        await this.syncArticleTags(savedArticle.id, normalizedTagIds, authorId);
+      }
 
       // Fetch full article with relations
       const fullArticle = await this.articleRepository
@@ -285,12 +341,28 @@ export class ArticlesService {
       return ServiceResponse.fail('Access denied: You cannot update this article');
     }
 
+    const normalizedTagIds =
+      dto.tagIds !== undefined ? this.normalizeTagIds(dto.tagIds) : undefined;
+
+    if (normalizedTagIds) {
+      const tagValidation = await this.validateTagIds(normalizedTagIds);
+      if (!tagValidation.success) {
+        return ServiceResponse.fail(tagValidation.errorMessage ?? 'Invalid tag IDs');
+      }
+    }
+
+    const { tagIds: _tagIds, ...articlePayload } = dto;
+
     // Apply updates
-    Object.assign(article, dto);
+    Object.assign(article, articlePayload);
     article.updatedById = requesterUserId;
 
     try {
       await this.articleRepository.save(article);
+
+      if (normalizedTagIds) {
+        await this.syncArticleTags(articleId, normalizedTagIds, requesterUserId);
+      }
 
       // Fetch updated article with all relations
       const updatedArticle = await this.articleRepository
@@ -352,6 +424,136 @@ export class ArticlesService {
       return ServiceResponse.ok(null);
     } catch (error) {
       return ServiceResponse.fail('Failed to delete article');
+    }
+  }
+
+  /**
+   * Restore a soft-deleted article
+   */
+  async restoreArticle(
+    articleId: string,
+    requesterRole: UserRole,
+    requesterUserId: string,
+  ): Promise<ServiceResponse<void>> {
+    const article = await this.articleRepository.findOne({
+      where: { id: articleId },
+    });
+
+    if (!article) {
+      return ServiceResponse.fail('Article not found');
+    }
+
+    if (!article.isDeleted) {
+      return ServiceResponse.ok(null);
+    }
+
+    const canRestore = this.canModifyArticle(article, requesterRole, requesterUserId);
+    if (!canRestore) {
+      return ServiceResponse.fail('Access denied: You cannot restore this article');
+    }
+
+    article.isDeleted = false;
+    article.updatedById = requesterUserId;
+
+    try {
+      await this.articleRepository.save(article);
+      return ServiceResponse.ok(null);
+    } catch (error) {
+      return ServiceResponse.fail('Failed to restore article');
+    }
+  }
+
+  /**
+   * Upload an image for an article (AUTHOR/ADMIN only)
+   */
+  async uploadArticleImage(
+    articleId: string,
+    file: Multer.File,
+    requesterRole: UserRole,
+    requesterUserId: string,
+  ): Promise<ServiceResponse<{ imageId: string; url: string }>> {
+    const article = await this.articleRepository.findOne({
+      where: { id: articleId },
+    });
+
+    if (!article || article.isDeleted) {
+      return ServiceResponse.fail('Article not found');
+    }
+
+    const canUpload = this.canModifyArticle(article, requesterRole, requesterUserId);
+    if (!canUpload) {
+      return ServiceResponse.fail('Access denied: You cannot upload images for this article');
+    }
+
+    if (!file) {
+      return ServiceResponse.fail('No file uploaded');
+    }
+
+    if (!file.buffer) {
+      return ServiceResponse.fail('Invalid file upload');
+    }
+
+    const allowedTypes: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/gif': 'gif',
+    };
+
+    const extension = allowedTypes[file.mimetype];
+    if (!extension) {
+      return ServiceResponse.fail(
+        'Unsupported file type. Allowed types: image/jpeg, image/png, image/webp, image/gif',
+      );
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      return ServiceResponse.fail('File too large. Max size is 5MB');
+    }
+
+    const fileName = `${randomUUID()}.${extension}`;
+    const articlesDir = path.join(process.cwd(), 'uploads', 'articles', articleId);
+    await fs.mkdir(articlesDir, { recursive: true });
+    const absolutePath = path.join(articlesDir, fileName);
+
+    try {
+      await fs.writeFile(absolutePath, file.buffer);
+
+      const publicUrl = path.posix.join('/uploads/articles', articleId, fileName);
+      const filePath = path.posix.join('uploads', 'articles', articleId, fileName);
+
+      const image = this.imageRepository.create({
+        articleId,
+        fileName,
+        publicUrl,
+        filePath,
+        mimeType: file.mimetype,
+        size: file.size,
+        createdById: requesterUserId,
+      });
+
+      const saved = await this.imageRepository.save(image);
+
+      void this.logService.createLog({
+        userId: requesterUserId,
+        action: LogAction.UPLOAD,
+        entityType: 'Image',
+        entityId: saved.id,
+        description: 'Article image uploaded',
+        metadata: {
+          articleId,
+          publicUrl,
+          mimeType: file.mimetype,
+          size: file.size,
+        },
+      });
+
+      return ServiceResponse.ok({ imageId: saved.id, url: publicUrl });
+    } catch (error) {
+      await this.deleteFileIfExists(absolutePath);
+      console.error('Upload article image error:', error);
+      return ServiceResponse.fail('Failed to upload image');
     }
   }
 
@@ -495,6 +697,9 @@ export class ArticlesService {
     dto.slug = article.slug;
     dto.content = article.content;
     dto.isPublished = article.isPublished;
+    dto.isDeleted = article.isDeleted;
+    dto.commentsCount =
+      (article as Article & { commentsCount?: number }).commentsCount ?? 0;
     dto.createdAt = article.createdAt;
 
     // Map author
@@ -546,17 +751,84 @@ export class ArticlesService {
     return dto;
   }
 
+  private normalizeTagIds(tagIds?: string[]): string[] {
+    if (!tagIds || tagIds.length === 0) {
+      return [];
+    }
+
+    return Array.from(new Set(tagIds.filter(Boolean)));
+  }
+
+  private async validateTagIds(tagIds: string[]): Promise<ServiceResponse<void>> {
+    if (tagIds.length === 0) {
+      return ServiceResponse.ok(null);
+    }
+
+    const tags = await this.tagRepository.find({
+      where: { id: In(tagIds), isDeleted: false },
+    });
+
+    if (tags.length !== tagIds.length) {
+      const foundIds = new Set(tags.map((tag) => tag.id));
+      const missing = tagIds.filter((tagId) => !foundIds.has(tagId));
+      return ServiceResponse.fail(
+        `Invalid tag IDs: ${missing.join(', ')}`,
+      );
+    }
+
+    return ServiceResponse.ok(null);
+  }
+
+  private async syncArticleTags(
+    articleId: string,
+    tagIds: string[],
+    userId: string,
+  ): Promise<void> {
+    const existing = await this.articleTagRepository.find({
+      where: { articleId },
+    });
+
+    const existingIds = new Set(existing.map((item) => item.tagId));
+    const nextIds = new Set(tagIds);
+
+    const toAdd = tagIds.filter((tagId) => !existingIds.has(tagId));
+    const toRemove = existing.filter((item) => !nextIds.has(item.tagId));
+
+    if (toRemove.length > 0) {
+      await this.articleTagRepository.remove(toRemove);
+    }
+
+    if (toAdd.length > 0) {
+      const additions = toAdd.map((tagId) =>
+        this.articleTagRepository.create({
+          articleId,
+          tagId,
+          createdById: userId,
+        }),
+      );
+      await this.articleTagRepository.save(additions);
+    }
+  }
+
   private buildImageFilePaths(image: Image): string[] {
     const paths: (string | null)[] = [];
 
-    const urlPath = this.resolveImageAbsolutePath(image.url);
+    const urlPath = this.resolveImageAbsolutePath(image.publicUrl);
     if (urlPath) {
       paths.push(urlPath);
     }
 
-    if (image.filename) {
-      const safeFilename = path.basename(image.filename);
-      paths.push(path.join(process.cwd(), 'uploads', 'articles', safeFilename));
+    const filePath = this.resolveImageAbsolutePath(image.filePath);
+    if (filePath) {
+      paths.push(filePath);
+    }
+
+    if (image.fileName) {
+      const safeFilename = path.basename(image.fileName);
+      const articleDir = image.articleId || 'unknown';
+      paths.push(
+        path.join(process.cwd(), 'uploads', 'articles', articleDir, safeFilename),
+      );
     }
 
     return Array.from(new Set(paths.filter(Boolean))) as string[];

@@ -8,16 +8,34 @@ export class ImageResponseDto {
   id: string;
 
   @ApiProperty({
-    description: 'URL of the image',
-    example: 'https://example.com/images/sample.jpg',
+    description: 'Public URL of the image',
+    example: '/uploads/articles/123e4567-e89b-12d3-a456-426614174000/sample.jpg',
   })
-  url: string;
+  publicUrl: string;
 
   @ApiProperty({
-    description: 'Filename of the image',
+    description: 'Stored file name',
     example: 'sample-image-123.jpg',
   })
-  filename: string;
+  fileName: string;
+
+  @ApiProperty({
+    description: 'Stored file path on server',
+    example: 'uploads/articles/123e4567-e89b-12d3-a456-426614174000/sample.jpg',
+  })
+  filePath: string;
+
+  @ApiProperty({
+    description: 'MIME type of the image',
+    example: 'image/jpeg',
+  })
+  mimeType: string;
+
+  @ApiProperty({
+    description: 'File size in bytes',
+    example: 245678,
+  })
+  size: number;
 
   @ApiProperty({
     description: 'Timestamp when the image was created',

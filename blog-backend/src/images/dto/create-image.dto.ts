@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, IsUUID } from 'class-validator';
 
 export class CreateImageDto {
   @ApiProperty({
@@ -11,18 +11,42 @@ export class CreateImageDto {
   articleId: string;
 
   @ApiProperty({
-    description: 'URL of the image',
-    example: 'https://example.com/images/sample.jpg',
+    description: 'Public URL of the image',
+    example: '/uploads/articles/123e4567-e89b-12d3-a456-426614174000/sample.jpg',
   })
   @IsString()
   @IsNotEmpty()
-  url: string;
+  publicUrl: string;
 
   @ApiProperty({
-    description: 'Filename of the image',
+    description: 'Stored file name',
     example: 'sample-image-123.jpg',
   })
   @IsString()
   @IsNotEmpty()
-  filename: string;
+  fileName: string;
+
+  @ApiProperty({
+    description: 'Stored file path on server',
+    example: 'uploads/articles/123e4567-e89b-12d3-a456-426614174000/sample.jpg',
+  })
+  @IsString()
+  @IsNotEmpty()
+  filePath: string;
+
+  @ApiProperty({
+    description: 'MIME type of the image',
+    example: 'image/jpeg',
+  })
+  @IsString()
+  @IsNotEmpty()
+  mimeType: string;
+
+  @ApiProperty({
+    description: 'File size in bytes',
+    example: 245678,
+  })
+  @IsNumber()
+  @IsNotEmpty()
+  size: number;
 }
