@@ -18,7 +18,7 @@ import {
 } from 'flowbite-react';
 import axios from 'axios';
 import AdminTableWrapper from '../components/AdminTableWrapper';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmModal from '../../../components/common/ConfirmModal';
 import StatusBadge from '../components/StatusBadge';
 import { createTag, deleteTag, fetchTags, updateTag, type Tag } from '../../../api/tag.api';
 

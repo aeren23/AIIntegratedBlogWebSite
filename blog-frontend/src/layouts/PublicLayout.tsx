@@ -33,9 +33,6 @@ const PublicLayout = () => {
                 <Button as={Link} to="/login" color="teal" size="sm">
                   Login
                 </Button>
-                <Button as={Link} to="/profile/me" color="light" size="sm" className="border-gray-200 text-gray-700 hover:bg-gray-50">
-                  Profile
-                </Button>
               </>
             )}
             {isAuthenticated && user && (
@@ -43,6 +40,15 @@ const PublicLayout = () => {
                 <span className="rounded-full bg-teal-50 px-3 py-1.5 text-xs font-medium text-teal-700">
                   {user.username}
                 </span>
+                <Button
+                  as={Link}
+                  to="/profile"
+                  color="light"
+                  size="sm"
+                  className="border-gray-200 text-gray-700 hover:bg-gray-50"
+                >
+                  Profile
+                </Button>
                 <Button as={Link} to={dashboardPath} color="teal" size="sm">
                   Dashboard
                 </Button>

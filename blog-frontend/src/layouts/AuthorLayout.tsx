@@ -42,6 +42,16 @@ const AuthorLayout = () => {
             >
               Editor
             </NavLink>
+            <NavLink 
+              to="/profile" 
+              className={({ isActive }) => 
+                isActive 
+                  ? 'font-medium text-amber-600' 
+                  : 'text-slate-600 hover:text-amber-600 transition-colors'
+              }
+            >
+              Profile
+            </NavLink>
             <div className="ml-2 flex items-center gap-2 border-l border-slate-200 pl-4">
               <span className="text-xs text-slate-500">{user?.username}</span>
               <Button color="light" size="xs" className="border-slate-300" onClick={logout}>

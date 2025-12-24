@@ -128,7 +128,7 @@ const ArticleEditorPage = () => {
         isPublished: formState.isPublished,
         tagIds: formState.tagIds,
       });
-      await loadEditorData();
+      navigate('/admin/articles');
     } catch (err) {
       setError(resolveErrorMessage(err));
     } finally {

@@ -4,6 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 
 const UserLayout = () => {
   const { user, logout } = useAuth();
+  const isAdmin =
+    user?.roles?.includes('ADMIN') || user?.roles?.includes('SUPERADMIN');
+  const isAuthor = user?.roles?.includes('AUTHOR');
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -33,7 +36,7 @@ const UserLayout = () => {
               Home
             </NavLink>
             <NavLink 
-              to="/user/profile" 
+              to="/profile" 
               className={({ isActive }) => 
                 isActive 
                   ? 'font-medium text-sky-600' 
@@ -42,6 +45,30 @@ const UserLayout = () => {
             >
               Profile
             </NavLink>
+            {isAuthor && (
+              <NavLink
+                to="/author"
+                className={({ isActive }) =>
+                  isActive
+                    ? 'font-medium text-sky-600'
+                    : 'text-slate-600 hover:text-sky-600 transition-colors'
+                }
+              >
+                Writer Panel
+              </NavLink>
+            )}
+            {isAdmin && (
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  isActive
+                    ? 'font-medium text-sky-600'
+                    : 'text-slate-600 hover:text-sky-600 transition-colors'
+                }
+              >
+                Admin Panel
+              </NavLink>
+            )}
             <div className="ml-2 flex items-center gap-2 border-l border-slate-200 pl-4">
               <span className="text-xs text-slate-500">{user?.username}</span>
               <Button color="light" size="xs" className="border-slate-300" onClick={logout}>

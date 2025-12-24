@@ -11,9 +11,13 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
+    "@toast-ui/editor": "^3.2.2",
+    "@toast-ui/editor-plugin-code-syntax-highlight": "^3.1.0",
+    "@toast-ui/react-editor": "^3.2.3",
     "axios": "^1.7.9",
     "flowbite-react": "^0.12.13",
     "marked": "^12.0.2",
+    "prismjs": "^1.29.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-icons": "^5.5.0",
@@ -24,6 +28,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.1",
+    "@types/prismjs": "^1.26.5",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@types/turndown": "^5.0.6",

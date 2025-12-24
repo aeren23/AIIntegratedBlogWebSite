@@ -48,6 +48,15 @@ const AdminLayout = () => {
               </div>
               <div className="flex items-center gap-3">
                 <div className="hidden text-xs text-gray-500 sm:block">{user?.username}</div>
+                <Button
+                  as={Link}
+                  to="/profile"
+                  color="light"
+                  size="sm"
+                  className="border-gray-200 text-gray-700"
+                >
+                  Profile
+                </Button>
                 <Button color="teal" size="sm" onClick={logout}>
                   Logout
                 </Button>

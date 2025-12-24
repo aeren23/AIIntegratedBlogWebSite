@@ -1,17 +1,26 @@
 import api, { type ApiResponse, unwrapApiResponse } from './axios';
 
-export type CurrentUserResponse = {
-  id: string;
-  username: string;
-  roles: string[];
-};
-
 export type UserProfile = {
   id: string;
   displayName: string | null;
   bio: string | null;
   profileImageUrl: string | null;
   createdAt: string;
+};
+
+export type CurrentUserResponse = {
+  id: string;
+  username: string;
+  email: string;
+  isActive: boolean;
+  createdAt: string;
+  roles: string[];
+  profile?: UserProfile;
+};
+
+export type UserProfilePayload = {
+  displayName?: string;
+  bio?: string;
 };
 
 export type UserRecord = {
@@ -32,6 +41,39 @@ export type RoleRecord = {
 
 export const fetchCurrentUser = async () => {
   const { data } = await api.get<ApiResponse<CurrentUserResponse>>('/users/me');
+  return unwrapApiResponse(data);
+};
+
+export const fetchMyProfile = async () => {
+  const { data } = await api.get<ApiResponse<UserProfile | null>>(
+    '/users/me/profile',
+  );
+  return unwrapApiResponse(data);
+};
+
+export const createMyProfile = async (payload: UserProfilePayload) => {
+  const { data } = await api.post<ApiResponse<UserProfile>>('/users/me/profile', payload);
+  return unwrapApiResponse(data);
+};
+
+export const updateMyProfile = async (payload: UserProfilePayload) => {
+  const { data } = await api.put<ApiResponse<UserProfile>>('/users/me/profile', payload);
+  return unwrapApiResponse(data);
+};
+
+export const uploadMyAvatar = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await api.post<ApiResponse<UserProfile>>(
+    '/users/me/profile/avatar',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+  return unwrapApiResponse(data);
+};
+
+export const deleteSelfAccount = async () => {
+  const { data } = await api.delete<ApiResponse<null>>('/users/me');
   return unwrapApiResponse(data);
 };
 
