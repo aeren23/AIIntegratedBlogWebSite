@@ -4,11 +4,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { User } from '../users/entities/user.entity';
+import { Role } from '../roles/entities/role.entity';
+import { UserRole as UserRoleEntity } from '../roles/entities/user-role.entity';
 import { LoginDto, RegisterDto, AuthResponseDto } from './dto/auth.dto';
 import { ServiceResponse } from '../common/service-response';
 import { JwtPayload } from './strategies/jwt.strategy';
 import { LogService } from '../logs/log.service';
 import { LogAction } from '../common/enums/log-action.enum';
+import { UserRole } from './enums/user-role.enum';
 
 @Injectable()
 export class AuthService {
@@ -44,17 +47,40 @@ export class AuthService {
       const saltRounds = 10;
       const passwordHash = await bcrypt.hash(dto.password, saltRounds);
 
-      // Create user
-      const user = this.userRepository.create({
-        username: dto.username,
-        email: dto.email,
-        passwordHash,
-        isActive: true,
-      });
-      await this.userRepository.save(user);
+      const user = await this.userRepository.manager.transaction(
+        async (manager) => {
+          const userRepo = manager.getRepository(User);
+          const roleRepo = manager.getRepository(Role);
+          const userRoleRepo = manager.getRepository(UserRoleEntity);
+
+          const createdUser = userRepo.create({
+            username: dto.username,
+            email: dto.email,
+            passwordHash,
+            isActive: true,
+          });
+          await userRepo.save(createdUser);
+
+          const defaultRole = await roleRepo.findOne({
+            where: { name: UserRole.USER },
+          });
+
+          if (!defaultRole) {
+            throw new Error('Default role USER not found');
+          }
+
+          const userRole = userRoleRepo.create({
+            userId: createdUser.id,
+            roleId: defaultRole.id,
+          });
+          await userRoleRepo.save(userRole);
+
+          return createdUser;
+        },
+      );
 
       // Generate JWT token
-      const token = this.generateToken(user);
+      const token = this.generateToken(user, [UserRole.USER]);
 
       void this.logService.createLog({
         userId: user.id,
@@ -69,12 +95,16 @@ export class AuthService {
           id: user.id,
           username: user.username,
           email: user.email,
-          roles: ['USER'], // Default role for new users
+          roles: [UserRole.USER],
         },
       });
     } catch (error) {
       console.error('Registration error:', error);
-      return ServiceResponse.fail('Failed to register user');
+      const errorMessage =
+        error instanceof Error && error.message === 'Default role USER not found'
+          ? error.message
+          : 'Failed to register user';
+      return ServiceResponse.fail(errorMessage);
     }
   }
 

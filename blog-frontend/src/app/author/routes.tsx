@@ -1,10 +1,17 @@
 import { Route } from 'react-router-dom';
-import MyArticlesPage from './pages/MyArticlesPage';
-import ArticleEditorPage from './pages/ArticleEditorPage';
+import AuthorDashboard from './pages/AuthorDashboard';
+import AuthorArticlesPage from './pages/AuthorArticlesPage';
+import AuthorArticleEditorPage from './pages/AuthorArticleEditorPage';
 
 const authorRoutes = [
-  <Route index element={<MyArticlesPage />} key="author-my-articles" />,
-  <Route path="editor" element={<ArticleEditorPage />} key="author-editor" />,
+  <Route index element={<AuthorDashboard />} key="author-dashboard" />,
+  <Route path="articles" element={<AuthorArticlesPage />} key="author-articles" />,
+  <Route path="articles/new" element={<AuthorArticleEditorPage />} key="author-article-new" />,
+  <Route
+    path="articles/:articleId/edit"
+    element={<AuthorArticleEditorPage />}
+    key="author-article-edit"
+  />,
 ];
 
 export default authorRoutes;

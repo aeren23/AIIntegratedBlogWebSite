@@ -21,33 +21,41 @@ const AuthorLayout = () => {
             </span>
           </div>
           <nav className="flex items-center gap-4 text-sm">
-            <NavLink 
-              to="/author" 
-              end 
-              className={({ isActive }) => 
-                isActive 
-                  ? 'font-medium text-amber-600' 
-                  : 'text-slate-600 hover:text-amber-600 transition-colors'
+            <NavLink
+              to="/author"
+              end
+              className={({ isActive }) =>
+                isActive
+                  ? 'font-medium text-amber-600'
+                  : 'text-slate-600 transition-colors hover:text-amber-600'
+              }
+            >
+              Dashboard
+            </NavLink>
+            <NavLink
+              to="/author/articles"
+              className={({ isActive }) =>
+                isActive
+                  ? 'font-medium text-amber-600'
+                  : 'text-slate-600 transition-colors hover:text-amber-600'
               }
             >
               My Articles
             </NavLink>
-            <NavLink 
-              to="/author/editor" 
-              className={({ isActive }) => 
-                isActive 
-                  ? 'font-medium text-amber-600' 
-                  : 'text-slate-600 hover:text-amber-600 transition-colors'
-              }
+            <Button
+              as={Link}
+              to="/author/articles/new"
+              size="xs"
+              className="!border-amber-200 !bg-amber-500 !text-white hover:!bg-amber-600"
             >
-              Editor
-            </NavLink>
-            <NavLink 
-              to="/profile" 
-              className={({ isActive }) => 
-                isActive 
-                  ? 'font-medium text-amber-600' 
-                  : 'text-slate-600 hover:text-amber-600 transition-colors'
+              New Article
+            </Button>
+            <NavLink
+              to="/profile"
+              className={({ isActive }) =>
+                isActive
+                  ? 'font-medium text-amber-600'
+                  : 'text-slate-600 transition-colors hover:text-amber-600'
               }
             >
               Profile
