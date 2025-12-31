@@ -16,6 +16,7 @@ import ArticleEditor from '../../../components/article/ArticleEditor';
 import { fetchCategories, type Category } from '../../../api/category.api';
 import { fetchTags, type Tag } from '../../../api/tag.api';
 import { fetchArticleById, updateArticle } from '../../../api/article.api';
+import { hydrateArticleHtml, normalizeArticleHtmlForSave } from '../../../utils/apiAssets';
 
 type ArticleFormState = {
   title: string;
@@ -84,7 +85,8 @@ const ArticleEditorPage = () => {
 
       setCategories(categoryList);
       setTags(tagList);
-      const markdownContent = turndownService.turndown(article.content ?? '');
+      const hydratedContent = hydrateArticleHtml(article.content ?? '');
+      const markdownContent = turndownService.turndown(hydratedContent);
       setFormState({
         title: article.title,
         slug: article.slug,
@@ -120,10 +122,11 @@ const ArticleEditorPage = () => {
 
     try {
       const htmlContent = marked.parse(formState.content) as string;
+      const normalizedContent = normalizeArticleHtmlForSave(htmlContent);
       await updateArticle(articleId, {
         title: formState.title.trim(),
         slug: formState.slug.trim(),
-        content: htmlContent,
+        content: normalizedContent,
         categoryId: formState.categoryId,
         isPublished: formState.isPublished,
         tagIds: formState.tagIds,

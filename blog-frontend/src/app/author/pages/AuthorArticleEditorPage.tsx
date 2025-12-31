@@ -24,6 +24,7 @@ import {
 } from '../../../api/article.api';
 import { fetchCommentsByArticle, type Comment } from '../../../api/comment.api';
 import { useAuth } from '../../../contexts/AuthContext';
+import { hydrateArticleHtml, normalizeArticleHtmlForSave } from '../../../utils/apiAssets';
 
 type ArticleFormState = {
   title: string;
@@ -156,7 +157,8 @@ const AuthorArticleEditorPage = () => {
         setError('You can only edit your own articles in the Author panel.');
       }
 
-      const markdownContent = turndownService.turndown(article.content ?? '');
+      const hydratedContent = hydrateArticleHtml(article.content ?? '');
+      const markdownContent = turndownService.turndown(hydratedContent);
       setFormState({
         title: article.title,
         slug: article.slug,
@@ -223,11 +225,12 @@ const AuthorArticleEditorPage = () => {
 
     try {
       const htmlContent = marked.parse(formState.content) as string;
+      const normalizedContent = normalizeArticleHtmlForSave(htmlContent);
       if (isNew) {
         const created = await createArticle({
           title: formState.title.trim(),
           slug: formState.slug.trim(),
-          content: htmlContent,
+          content: normalizedContent,
           categoryId: formState.categoryId,
           isPublished: formState.isPublished,
           tagIds: formState.tagIds,
@@ -244,7 +247,7 @@ const AuthorArticleEditorPage = () => {
       await updateArticle(articleId, {
         title: formState.title.trim(),
         slug: formState.slug.trim(),
-        content: htmlContent,
+        content: normalizedContent,
         categoryId: formState.categoryId,
         isPublished: formState.isPublished,
         tagIds: formState.tagIds,

@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { HiOutlineCamera } from 'react-icons/hi';
 import { useAuth } from '../../../contexts/AuthContext';
+import { resolveApiAssetUrl } from '../../../utils/apiAssets';
 import {
   createMyProfile,
   deleteSelfAccount,
@@ -26,15 +27,6 @@ type ProfileFormState = {
   bio: string;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const API_ORIGIN = (() => {
-  try {
-    return new URL(API_BASE_URL).origin;
-  } catch {
-    return API_BASE_URL.replace(/\/api\/?$/, '');
-  }
-})();
-
 const resolveErrorMessage = (err: unknown) => {
   if (axios.isAxiosError(err)) {
     const apiMessage = (err.response?.data as { errorMessage?: string } | undefined)
@@ -47,17 +39,6 @@ const resolveErrorMessage = (err: unknown) => {
     return err.message;
   }
   return 'Unable to load profile details.';
-};
-
-const resolveAvatarUrl = (url?: string | null) => {
-  if (!url) {
-    return null;
-  }
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
-  }
-  const normalized = url.startsWith('/') ? url : `/${url}`;
-  return `${API_ORIGIN}${normalized}`;
 };
 
 const formatDate = (value?: string | null) => {
@@ -198,7 +179,7 @@ const Profile = () => {
     formState.displayName !== initialDisplayName || formState.bio !== initialBio;
   const canSave = profile ? isDirty : true;
   const avatarUrl = useMemo(
-    () => resolveAvatarUrl(profile?.profileImageUrl),
+    () => resolveApiAssetUrl(profile?.profileImageUrl),
     [profile?.profileImageUrl],
   );
 

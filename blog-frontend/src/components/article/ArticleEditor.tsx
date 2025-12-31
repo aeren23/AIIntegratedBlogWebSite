@@ -11,6 +11,7 @@ import 'prismjs/components/prism-sql';
 import 'prismjs/components/prism-typescript';
 import 'prismjs/components/prism-yaml';
 import { uploadArticleImage } from '../../api/article.api';
+import { resolveApiAssetUrl } from '../../utils/apiAssets';
 
 type ArticleEditorProps = {
   value: string;
@@ -68,7 +69,8 @@ const ArticleEditor = ({ value, onChange, articleId, disabled }: ArticleEditorPr
             ? blob
             : new File([blob], 'image', { type: blob.type || 'application/octet-stream' });
         const response = await uploadArticleImage(articleId, file);
-        callback(response.url, file.name);
+        const resolvedUrl = resolveApiAssetUrl(response.url) ?? response.url;
+        callback(resolvedUrl, file.name);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Image upload failed.';
         setError(message);

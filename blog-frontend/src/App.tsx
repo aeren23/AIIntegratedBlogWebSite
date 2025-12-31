@@ -1,8 +1,6 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, Outlet } from 'react-router-dom';
+import AppLayout from './layouts/AppLayout';
 import AdminLayout from './layouts/AdminLayout';
-import AuthorLayout from './layouts/AuthorLayout';
-import UserLayout from './layouts/UserLayout';
-import PublicLayout from './layouts/PublicLayout';
 import RoleGuard from './guards/RoleGuard';
 import adminRoutes from './app/admin/routes';
 import authorRoutes from './app/author/routes';
@@ -13,32 +11,32 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<PublicLayout />}>
+        {/* Public & User/Author Layout */}
+        <Route path="/" element={<AppLayout />}>
           {publicRoutes}
+          <Route
+            path="user"
+            element={
+              <RoleGuard roles={['USER', 'AUTHOR', 'ADMIN', 'SUPERADMIN']}>
+                <Outlet />
+              </RoleGuard>
+            }
+          >
+            {userRoutes}
+          </Route>
+          <Route
+            path="author"
+            element={
+              <RoleGuard roles={['AUTHOR', 'ADMIN', 'SUPERADMIN']}>
+                <Outlet />
+              </RoleGuard>
+            }
+          >
+            {authorRoutes}
+          </Route>
         </Route>
 
-        <Route
-          path="/user"
-          element={
-            <RoleGuard roles={['USER', 'AUTHOR', 'ADMIN', 'SUPERADMIN']}>
-              <UserLayout />
-            </RoleGuard>
-          }
-        >
-          {userRoutes}
-        </Route>
-
-        <Route
-          path="/author"
-          element={
-            <RoleGuard roles={['AUTHOR', 'ADMIN', 'SUPERADMIN']}>
-              <AuthorLayout />
-            </RoleGuard>
-          }
-        >
-          {authorRoutes}
-        </Route>
-
+        {/* Admin Layout - Separate with fixed sidebar */}
         <Route
           path="/admin"
           element={
@@ -49,7 +47,6 @@ function App() {
         >
           {adminRoutes}
         </Route>
-
       </Routes>
     </BrowserRouter>
   );
