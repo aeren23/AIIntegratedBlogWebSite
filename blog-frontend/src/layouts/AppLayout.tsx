@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import { Badge, Button } from 'flowbite-react';
 import { useAuth } from '../contexts/AuthContext';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 const navLinkClass =
   'text-sm font-medium text-slate-700 transition-colors hover:text-teal-600';
@@ -8,6 +10,7 @@ const navLinkActiveClass = 'text-sm font-semibold text-teal-600';
 
 const AppLayout = () => {
   const { isAuthenticated, user, logout } = useAuth();
+  const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const roles = user?.roles ?? [];
   const isAdmin = roles.includes('ADMIN') || roles.includes('SUPERADMIN');
   const isAuthor = roles.includes('AUTHOR') || isAdmin;
@@ -115,8 +118,8 @@ const AppLayout = () => {
                 <Button
                   color="light"
                   size="sm"
-                  className="border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-                  onClick={logout}
+                  className="border-slate-300 bg-white text-slate-700 shadow-sm transition-colors hover:bg-red-50 hover:text-red-600 hover:border-red-200 cursor-pointer"
+                  onClick={() => setIsLogoutOpen(true)}
                 >
                   Logout
                 </Button>
@@ -131,6 +134,21 @@ const AppLayout = () => {
           <Outlet />
         </main>
       </div>
+
+
+      <ConfirmModal
+        open={isLogoutOpen}
+        title="Do you want to logout?"
+        description="Do you really want to logout from your account?"
+        confirmLabel="Logout"
+        cancelLabel="Cancel"
+        confirmColor="failure"
+        onConfirm={() => {
+          setIsLogoutOpen(false);
+          logout();
+        }}
+        onCancel={() => setIsLogoutOpen(false)}
+      />
 
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto max-w-6xl px-6 py-6 text-center text-sm font-medium text-slate-600">

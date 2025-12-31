@@ -69,7 +69,7 @@ const AdminSidebar = ({ onNavigate, className }: AdminSidebarProps) => {
   const navigate = useNavigate();
 
   const containerClasses = [
-    'h-full w-64 bg-slate-900',
+    'h-full w-64 rounded-none bg-slate-900',
     className,
   ]
     .filter(Boolean)
@@ -77,18 +77,18 @@ const AdminSidebar = ({ onNavigate, className }: AdminSidebarProps) => {
 
   const sidebarTheme = {
     root: {
-      base: 'h-full',
-      inner: 'h-full overflow-y-auto bg-transparent px-3 py-4',
+      base: 'h-full rounded-none',
+      inner: 'h-full overflow-y-auto rounded-none bg-transparent px-3 py-4',
     },
     items: {
       base: 'space-y-1',
     },
     item: {
-      base: 'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 text-slate-400 hover:bg-slate-800 hover:text-white',
-      active: 'bg-teal-600 text-white shadow-lg shadow-teal-600/30',
+      base: 'group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-150 text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+      active: 'bg-teal-50 text-slate-900 border border-teal-200',
       icon: {
-        base: 'h-5 w-5 text-slate-500 transition-colors group-hover:text-slate-300',
-        active: 'text-white',
+        base: 'h-5 w-5 text-slate-400 transition-colors group-hover:text-slate-700',
+        active: 'text-teal-600',
       },
       content: {
         base: 'flex-1 text-left',
@@ -145,9 +145,7 @@ const AdminSidebar = ({ onNavigate, className }: AdminSidebarProps) => {
 
       {/* Footer */}
       <div className="absolute bottom-0 left-0 right-0 border-t border-slate-700/50 bg-slate-900/80 p-3">
-        <p className="text-center text-xs text-slate-500">
-          v1.0.0 • Blog Admin
-        </p>
+        <p className="text-center text-xs text-slate-500">v1.0.0 Blog Admin</p>
       </div>
     </Sidebar>
   );
