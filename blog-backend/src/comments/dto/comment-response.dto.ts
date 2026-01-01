@@ -21,6 +21,19 @@ export class CommentResponseDto {
   createdAt: Date;
 
   @ApiProperty({
+    description: 'Whether the comment is deleted',
+    example: false,
+  })
+  isDeleted: boolean;
+
+  @ApiProperty({
+    description: 'Parent comment id (null for root comments)',
+    example: null,
+    nullable: true,
+  })
+  parentCommentId: string | null;
+
+  @ApiProperty({
     description: 'User who created the comment',
     type: () => UserResponseDto,
   })

@@ -80,10 +80,19 @@ export class ArticlesService {
       .leftJoinAndSelect('article.category', 'category')
       .leftJoinAndSelect('article.articleTags', 'articleTags')
       .leftJoinAndSelect('articleTags.tag', 'tag');
-    queryBuilder.loadRelationCountAndMap(
-      'article.commentsCount',
-      'article.comments',
-    );
+    if (this.isAdminRole(requesterRole)) {
+      queryBuilder.loadRelationCountAndMap(
+        'article.commentsCount',
+        'article.comments',
+      );
+    } else {
+      queryBuilder.loadRelationCountAndMap(
+        'article.commentsCount',
+        'article.comments',
+        'comment',
+        (qb) => qb.andWhere('comment.isDeleted = :isDeleted', { isDeleted: false }),
+      );
+    }
 
     // Apply role-based visibility rules
     this.applyVisibilityRules(
@@ -152,10 +161,19 @@ export class ArticlesService {
       .leftJoinAndSelect('article.articleTags', 'articleTags')
       .leftJoinAndSelect('articleTags.tag', 'tag')
       .where('article.slug = :slug', { slug });
-    queryBuilder.loadRelationCountAndMap(
-      'article.commentsCount',
-      'article.comments',
-    );
+    if (this.isAdminRole(requesterRole)) {
+      queryBuilder.loadRelationCountAndMap(
+        'article.commentsCount',
+        'article.comments',
+      );
+    } else {
+      queryBuilder.loadRelationCountAndMap(
+        'article.commentsCount',
+        'article.comments',
+        'comment',
+        (qb) => qb.andWhere('comment.isDeleted = :isDeleted', { isDeleted: false }),
+      );
+    }
 
     // Apply visibility rules
     this.applyVisibilityRules(queryBuilder, requesterRole, requesterUserId, false);
@@ -177,16 +195,27 @@ export class ArticlesService {
     requesterRole: UserRole,
     requesterUserId?: string,
   ): Promise<ServiceResponse<ArticleResponseDto>> {
-    const article = await this.articleRepository
+    const queryBuilder = this.articleRepository
       .createQueryBuilder('article')
       .leftJoinAndSelect('article.author', 'author')
       .leftJoinAndSelect('author.profile', 'profile')
       .leftJoinAndSelect('article.category', 'category')
       .leftJoinAndSelect('article.articleTags', 'articleTags')
       .leftJoinAndSelect('articleTags.tag', 'tag')
-      .where('article.id = :articleId', { articleId })
-      .loadRelationCountAndMap('article.commentsCount', 'article.comments')
-      .getOne();
+      .where('article.id = :articleId', { articleId });
+
+    if (this.isAdminRole(requesterRole)) {
+      queryBuilder.loadRelationCountAndMap('article.commentsCount', 'article.comments');
+    } else {
+      queryBuilder.loadRelationCountAndMap(
+        'article.commentsCount',
+        'article.comments',
+        'comment',
+        (qb) => qb.andWhere('comment.isDeleted = :isDeleted', { isDeleted: false }),
+      );
+    }
+
+    const article = await queryBuilder.getOne();
 
     if (!article) {
       return ServiceResponse.fail('Article not found');
@@ -685,6 +714,10 @@ export class ArticlesService {
 
     // All other cases: no permission
     return false;
+  }
+
+  private isAdminRole(requesterRole: UserRole): boolean {
+    return requesterRole === UserRole.ADMIN || requesterRole === UserRole.SUPERADMIN;
   }
 
   /**

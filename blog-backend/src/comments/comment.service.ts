@@ -40,12 +40,8 @@ export class CommentService {
         .where('comment.articleId = :articleId', { articleId })
         .orderBy('comment.createdAt', 'ASC');
 
-      if (!this.isAdminRole(requesterRole)) {
-        queryBuilder.andWhere('comment.isDeleted = :isDeleted', { isDeleted: false });
-      }
-
       const comments = await queryBuilder.getMany();
-      const tree = this.buildCommentTree(comments);
+      const tree = this.buildCommentTree(comments, requesterRole);
       return ServiceResponse.ok(tree);
     } catch (error) {
       console.error('Get comments error:', error);
@@ -128,7 +124,7 @@ export class CommentService {
         return ServiceResponse.fail('Comment created but could not be retrieved');
       }
 
-      return ServiceResponse.ok(this.mapToCommentResponseDto(full));
+      return ServiceResponse.ok(this.mapToCommentResponseDto(full, requesterRole));
     } catch (error) {
       console.error('Create comment error:', error);
       return ServiceResponse.fail('Failed to create comment');
@@ -183,7 +179,7 @@ export class CommentService {
       comment.updatedById = userId;
 
       const updated = await this.commentRepository.save(comment);
-      return ServiceResponse.ok(this.mapToCommentResponseDto(updated));
+      return ServiceResponse.ok(this.mapToCommentResponseDto(updated, requesterRole));
     } catch (error) {
       console.error('Update comment error:', error);
       return ServiceResponse.fail('Failed to update comment');
@@ -210,12 +206,11 @@ export class CommentService {
         return ServiceResponse.fail('You are not allowed to delete this comment');
       }
 
-      if (comment.isDeleted && comment.content === '[deleted]') {
+      if (comment.isDeleted) {
         return ServiceResponse.ok(null);
       }
 
       comment.isDeleted = true;
-      comment.content = '[deleted]';
       comment.updatedById = userId;
       await this.commentRepository.save(comment);
 
@@ -312,12 +307,15 @@ export class CommentService {
     return UserRole.USER;
   }
 
-  private buildCommentTree(comments: Comment[]): CommentResponseDto[] {
+  private buildCommentTree(
+    comments: Comment[],
+    requesterRole: UserRole,
+  ): CommentResponseDto[] {
     const nodeById = new Map<string, CommentResponseDto>();
     const parentIdById = new Map<string, string | null>();
 
     for (const comment of comments) {
-      nodeById.set(comment.id, this.mapToCommentResponseDto(comment));
+      nodeById.set(comment.id, this.mapToCommentResponseDto(comment, requesterRole));
       parentIdById.set(comment.id, comment.parentCommentId ?? null);
     }
 
@@ -342,10 +340,18 @@ export class CommentService {
     return roots;
   }
 
-  private mapToCommentResponseDto(comment: Comment): CommentResponseDto {
+  private mapToCommentResponseDto(
+    comment: Comment,
+    requesterRole: UserRole,
+  ): CommentResponseDto {
     const dto = new CommentResponseDto();
     dto.id = comment.id;
-    dto.content = comment.content;
+    dto.isDeleted = comment.isDeleted;
+    dto.parentCommentId = comment.parentCommentId ?? null;
+    dto.content =
+      comment.isDeleted && !this.isAdminRole(requesterRole)
+        ? '[deleted]'
+        : comment.content;
     dto.createdAt = comment.createdAt;
     dto.user = this.mapToUserResponseDto(comment.user);
     dto.children = [];

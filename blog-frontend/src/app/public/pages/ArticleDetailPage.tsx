@@ -7,18 +7,20 @@ import {
   fetchArticles,
   type Article,
 } from '../../../api/article.api';
-import { fetchCommentsByArticle, type Comment } from '../../../api/comment.api';
-import CommentThread, { type CommentNode } from '../components/CommentThread';
+import {
+  createComment,
+  deleteComment,
+  fetchCommentsByArticle,
+  hardDeleteComment,
+  type Comment,
+  updateComment,
+} from '../../../api/comment.api';
+import CommentForm from '../../../components/comments/CommentForm';
+import CommentSkeleton from '../../../components/comments/CommentSkeleton';
+import CommentTree from '../../../components/comments/CommentTree';
+import { useAuth } from '../../../contexts/AuthContext';
 import { hydrateArticleHtml } from '../../../utils/apiAssets';
 import usePageMeta from '../../../hooks/usePageMeta';
-
-type CommentRecord = {
-  id: string;
-  content: string;
-  createdAt: string;
-  author: string;
-  parentCommentId: string | null;
-};
 
 const stripHtml = (html: string) =>
   html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -37,62 +39,16 @@ const resolveErrorMessage = (err: unknown) => {
   return 'Unable to load article.';
 };
 
-const flattenComments = (
-  nodes: Comment[],
-  parentCommentId: string | null = null,
-): CommentRecord[] => {
-  return nodes.flatMap((comment) => {
-    const record: CommentRecord = {
-      id: comment.id,
-      content: comment.content,
-      createdAt: comment.createdAt,
-      author: comment.user?.username ?? 'Unknown',
-      parentCommentId,
-    };
-    const children = comment.children?.length
-      ? flattenComments(comment.children, comment.id)
-      : [];
-    return [record, ...children];
-  });
-};
-
-const buildCommentTree = (records: CommentRecord[]) => {
-  const nodes = new Map<string, CommentNode>();
-  const roots: CommentNode[] = [];
-
-  records.forEach((record) => {
-    nodes.set(record.id, {
-      id: record.id,
-      content: record.content,
-      createdAt: record.createdAt,
-      author: record.author,
-      children: [],
-    });
-  });
-
-  records.forEach((record) => {
-    const node = nodes.get(record.id);
-    if (!node) {
-      return;
-    }
-    if (record.parentCommentId && nodes.has(record.parentCommentId)) {
-      nodes.get(record.parentCommentId)?.children.push(node);
-    } else {
-      roots.push(node);
-    }
-  });
-
-  return roots;
-};
-
 const ArticleDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { isAuthenticated } = useAuth();
   const [article, setArticle] = useState<Article | null>(null);
   const [similarArticles, setSimilarArticles] = useState<Article[]>([]);
-  const [commentRecords, setCommentRecords] = useState<CommentRecord[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCommentsLoading, setIsCommentsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   const description = useMemo(
     () => (article?.content ? stripHtml(article.content).slice(0, 160) : ''),
@@ -148,12 +104,12 @@ const ArticleDetailPage = () => {
     }
 
     setIsCommentsLoading(true);
+    setCommentError(null);
     try {
       const response = await fetchCommentsByArticle(article.id);
-      const flat = flattenComments(response, null);
-      setCommentRecords(flat);
+      setComments(response);
     } catch (err) {
-      setError(resolveErrorMessage(err));
+      setCommentError(resolveErrorMessage(err));
     } finally {
       setIsCommentsLoading(false);
     }
@@ -169,7 +125,69 @@ const ArticleDetailPage = () => {
     }
   }, [article?.id, loadComments]);
 
-  const commentTree = useMemo(() => buildCommentTree(commentRecords), [commentRecords]);
+  const handleCreateComment = useCallback(
+    async (content: string, parentCommentId?: string | null) => {
+      if (!article?.id) {
+        throw new Error('Missing article id.');
+      }
+      setCommentError(null);
+      try {
+        await createComment(article.id, {
+          content,
+          parentCommentId: parentCommentId ?? undefined,
+        });
+        await loadComments();
+      } catch (err) {
+        const message = resolveErrorMessage(err);
+        setCommentError(message);
+        throw new Error(message);
+      }
+    },
+    [article?.id, loadComments],
+  );
+
+  const handleUpdateComment = useCallback(
+    async (commentId: string, content: string) => {
+      setCommentError(null);
+      try {
+        await updateComment(commentId, { content });
+        await loadComments();
+      } catch (err) {
+        const message = resolveErrorMessage(err);
+        setCommentError(message);
+        throw new Error(message);
+      }
+    },
+    [loadComments],
+  );
+
+  const handleSoftDelete = useCallback(
+    async (commentId: string) => {
+      setCommentError(null);
+      try {
+        await deleteComment(commentId);
+        await loadComments();
+      } catch (err) {
+        setCommentError(resolveErrorMessage(err));
+      }
+    },
+    [loadComments],
+  );
+
+  const handleHardDelete = useCallback(
+    async (commentId: string) => {
+      setCommentError(null);
+      try {
+        await hardDeleteComment(commentId);
+        await loadComments();
+      } catch (err) {
+        setCommentError(resolveErrorMessage(err));
+      }
+    },
+    [loadComments],
+  );
+
+  const commentCount = comments.length;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[2.2fr_1fr]">
@@ -225,7 +243,7 @@ const ArticleDetailPage = () => {
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Comments</h2>
                   <p className="text-sm text-slate-600">
-                    {commentRecords.length} comment{commentRecords.length === 1 ? '' : 's'}
+                    {commentCount} comment{commentCount === 1 ? '' : 's'}
                   </p>
                 </div>
                 <Button
@@ -239,18 +257,48 @@ const ArticleDetailPage = () => {
                 </Button>
               </div>
 
-              {isCommentsLoading ? (
-                <div className="mt-4 flex items-center gap-3 text-sm text-slate-600">
-                  <Spinner size="sm" />
-                  Loading comments...
-                </div>
-              ) : commentTree.length === 0 ? (
-                <p className="mt-4 text-sm text-slate-500">No comments yet.</p>
-              ) : (
-                <div className="mt-4">
-                  <CommentThread nodes={commentTree} />
-                </div>
+              {commentError && (
+                <Alert color="failure" className="mt-4">
+                  <span className="font-medium">Comment error.</span> {commentError}
+                </Alert>
               )}
+
+              <div className="mt-4">
+                {isAuthenticated ? (
+                  <CommentForm onSubmit={(content) => handleCreateComment(content)} />
+                ) : (
+                  <Alert color="info">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <span>Log in to join the discussion.</span>
+                      <Button
+                        as={Link}
+                        to="/login"
+                        size="xs"
+                        color="light"
+                        className="border-teal-200 text-teal-700 hover:bg-teal-50"
+                      >
+                        Go to login
+                      </Button>
+                    </div>
+                  </Alert>
+                )}
+              </div>
+
+              <div className="mt-6">
+                {isCommentsLoading ? (
+                  <CommentSkeleton rows={3} />
+                ) : (
+                  <CommentTree
+                    comments={comments}
+                    mode="public"
+                    emptyMessage="No comments yet."
+                    onReply={(parentId, content) => handleCreateComment(content, parentId)}
+                    onEdit={handleUpdateComment}
+                    onSoftDelete={handleSoftDelete}
+                    onHardDelete={handleHardDelete}
+                  />
+                )}
+              </div>
             </section>
           </>
         ) : (

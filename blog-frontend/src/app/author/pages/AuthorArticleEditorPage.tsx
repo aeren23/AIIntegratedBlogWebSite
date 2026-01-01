@@ -23,6 +23,8 @@ import {
   type Article,
 } from '../../../api/article.api';
 import { fetchCommentsByArticle, type Comment } from '../../../api/comment.api';
+import CommentSkeleton from '../../../components/comments/CommentSkeleton';
+import CommentTree from '../../../components/comments/CommentTree';
 import { useAuth } from '../../../contexts/AuthContext';
 import { hydrateArticleHtml, normalizeArticleHtmlForSave } from '../../../utils/apiAssets';
 
@@ -34,8 +36,6 @@ type ArticleFormState = {
   isPublished: boolean;
   tagIds: string[];
 };
-
-type FlatComment = Comment & { depth: number };
 
 marked.setOptions({
   breaks: true,
@@ -61,29 +61,6 @@ const slugify = (value: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-
-const flattenComments = (items: Comment[], depth = 0): FlatComment[] => {
-  return items.flatMap((comment) => {
-    const node: FlatComment = { ...comment, depth };
-    const children = comment.children?.length
-      ? flattenComments(comment.children, depth + 1)
-      : [];
-    return [node, ...children];
-  });
-};
-
-const depthClass = (depth: number) => {
-  if (depth >= 3) {
-    return 'pl-10';
-  }
-  if (depth === 2) {
-    return 'pl-8';
-  }
-  if (depth === 1) {
-    return 'pl-4';
-  }
-  return 'pl-0';
-};
 
 const AuthorArticleEditorPage = () => {
   const { articleId } = useParams<{ articleId: string }>();
@@ -204,8 +181,6 @@ const AuthorArticleEditorPage = () => {
       void loadComments();
     }
   }, [isNew, loadComments]);
-
-  const flatComments = useMemo(() => flattenComments(comments), [comments]);
 
   const canEdit = isOwner && !articleDeleted;
 
@@ -470,40 +445,17 @@ const AuthorArticleEditorPage = () => {
               Refresh
             </Button>
           </div>
-          {isCommentsLoading ? (
-            <div className="mt-4 flex items-center gap-3 text-sm text-slate-600">
-              <Spinner size="sm" />
-              Loading comments...
-            </div>
-          ) : flatComments.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">No comments yet.</p>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {flatComments.map((comment) => {
-                const isDeleted = comment.content === '[deleted]';
-                return (
-                  <div
-                    key={comment.id}
-                    className={`rounded-xl border border-amber-100/60 bg-white/80 p-3 ${depthClass(
-                      comment.depth,
-                    )}`}
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-                      <span>{comment.user?.username ?? 'Unknown'}</span>
-                      <span>{new Date(comment.createdAt).toLocaleString()}</span>
-                    </div>
-                    <p
-                      className={`mt-2 text-sm ${
-                        isDeleted ? 'italic text-slate-400' : 'text-slate-700'
-                      }`}
-                    >
-                      {comment.content}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <div className="mt-4">
+            {isCommentsLoading ? (
+              <CommentSkeleton rows={3} />
+            ) : (
+              <CommentTree
+                comments={comments}
+                mode="author"
+                emptyMessage="No comments yet."
+              />
+            )}
+          </div>
         </Card>
       )}
     </div>
