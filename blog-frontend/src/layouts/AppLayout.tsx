@@ -40,14 +40,34 @@ const AppLayout = () => {
             >
               Home
             </NavLink>
-            <NavLink
-              to="/search"
-              className={({ isActive }) =>
-                isActive ? navLinkActiveClass : navLinkClass
-              }
-            >
-              Search
-            </NavLink>
+            {isAuthenticated && (
+              <>
+                <NavLink
+                  to="/articles"
+                  className={({ isActive }) =>
+                    isActive ? navLinkActiveClass : navLinkClass
+                  }
+                >
+                  Articles
+                </NavLink>
+                <NavLink
+                  to="/search"
+                  className={({ isActive }) =>
+                    isActive ? navLinkActiveClass : navLinkClass
+                  }
+                >
+                  Search
+                </NavLink>
+                <NavLink
+                  to="/categories"
+                  className={({ isActive }) =>
+                    isActive ? navLinkActiveClass : navLinkClass
+                  }
+                >
+                  Categories
+                </NavLink>
+              </>
+            )}
 
             {isAuthenticated && isUserOnly && (
               <NavLink
@@ -61,7 +81,7 @@ const AppLayout = () => {
             )}
 
             {/* Author Panel Link - Only for authors (not admin-only) */}
-            {isAuthor && !isAdmin && (
+            {(isAuthor || isAdmin) && (
               <NavLink
                 to="/author"
                 className={({ isActive }) =>

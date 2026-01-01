@@ -44,7 +44,7 @@ const HomePage = () => {
   const [error, setError] = useState<string | null>(null);
 
   usePageMeta({
-    title: 'Blog | Latest Articles',
+    title: 'Articles | Blog',
     description: 'Discover the latest articles, popular discussions, and featured tags.',
   });
 
@@ -153,8 +153,8 @@ const HomePage = () => {
 
       <section className="space-y-6">
         <header className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.2em] text-teal-600">Content hub</p>
-          <h1 className="text-3xl font-semibold text-slate-900">Latest stories</h1>
+          <p className="text-xs uppercase tracking-[0.2em] text-teal-600">Articles</p>
+          <h1 className="text-3xl font-semibold text-slate-900">Latest articles</h1>
           <p className="text-sm text-slate-600">
             Discover editorials, engineering insights, and product news.
           </p>

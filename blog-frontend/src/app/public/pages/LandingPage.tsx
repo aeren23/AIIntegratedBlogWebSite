@@ -1,6 +1,7 @@
 import { Button, Card, Badge } from 'flowbite-react';
 import { Link } from 'react-router-dom';
 import { HiOutlineShieldCheck, HiOutlineDocumentText, HiOutlineChartBar } from 'react-icons/hi';
+import usePageMeta from '../../../hooks/usePageMeta';
 
 const cardTheme = {
   root: {
@@ -10,6 +11,11 @@ const cardTheme = {
 };
 
 const LandingPage = () => {
+  usePageMeta({
+    title: 'Home | Blog',
+    description: 'Publish faster and reach the right audience with a modern blog platform.',
+  });
+
   return (
     <div className="grid gap-14 lg:grid-cols-[1.2fr_0.8fr]">
       <section className="space-y-8">
