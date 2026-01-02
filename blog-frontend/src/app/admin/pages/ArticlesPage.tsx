@@ -24,6 +24,7 @@ import {
   softDeleteArticle,
   type Article,
 } from '../../../api/article.api';
+import { resolveApiAssetUrl } from '../../../utils/apiAssets';
 
 type ConfirmAction = {
   type: 'softDelete' | 'restore' | 'hardDelete';
@@ -224,11 +225,15 @@ const ArticlesPage = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  articles.map((article) => (
-                    <TableRow
-                      key={article.id}
-                      className={`bg-white/80 ${article.isDeleted ? 'opacity-60' : ''}`}
-                    >
+                  articles.map((article) => {
+                    const authorAvatar = resolveApiAssetUrl(
+                      article.author?.profile?.profileImageUrl,
+                    );
+                    return (
+                      <TableRow
+                        key={article.id}
+                        className={`bg-white/80 ${article.isDeleted ? 'opacity-60' : ''}`}
+                      >
                       <TableCell className="font-medium text-slate-900">
                         <div className="space-y-1">
                           <p>{article.title}</p>
@@ -236,7 +241,24 @@ const ArticlesPage = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-slate-600">
-                        {article.author?.username ?? 'Unknown'}
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-xs font-semibold text-slate-600">
+                            {authorAvatar ? (
+                              <img
+                                src={authorAvatar}
+                                alt={article.author?.username ?? 'Author'}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <span>
+                                {(article.author?.username ?? 'U')
+                                  .slice(0, 1)
+                                  .toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                          <span>{article.author?.username ?? 'Unknown'}</span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-slate-600">
                         {article.category?.name ?? 'Unassigned'}
@@ -323,8 +345,9 @@ const ArticlesPage = () => {
                           </Button>
                         </div>
                       </TableCell>
-                    </TableRow>
-                  ))
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

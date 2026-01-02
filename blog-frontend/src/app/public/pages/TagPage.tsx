@@ -1,25 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  Pagination,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeadCell,
-  TableRow,
 } from 'flowbite-react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { fetchArticles, type Article } from '../../../api/article.api';
 import { fetchTagBySlug, type Tag } from '../../../api/tag.api';
+import ArticleList from '../components/ArticleList';
 import ArticleTableSkeleton from '../components/ArticleTableSkeleton';
 import usePageMeta from '../../../hooks/usePageMeta';
 
 const PAGE_SIZE = 8;
-
-const stripHtml = (html: string) =>
-  html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
 const resolveErrorMessage = (err: unknown) => {
   if (axios.isAxiosError(err)) {
@@ -90,88 +81,101 @@ const TagPage = () => {
   }, [loadTag]);
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.2em] text-teal-600">Tag</p>
-        <h1 className="text-3xl font-semibold text-slate-900">
-          {tag ? `#${tag.name}` : 'Tag'}
-        </h1>
-        <p className="text-sm text-slate-600">
-          {totalCount} article{totalCount === 1 ? '' : 's'} found.
-        </p>
-      </header>
+    <div className="relative min-h-screen">
+      {/* Background decoration */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -left-40 -top-20 h-80 w-80 rounded-full bg-gradient-to-br from-emerald-200/30 to-teal-200/30 blur-3xl" />
+        <div className="absolute -right-40 top-1/3 h-80 w-80 rounded-full bg-gradient-to-br from-teal-200/20 to-cyan-200/20 blur-3xl" />
+      </div>
 
-      {error && (
-        <Alert color="failure">
-          <span className="font-medium">Tag error.</span> {error}
-        </Alert>
-      )}
+      <div className="relative mx-auto max-w-5xl space-y-8">
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-sm">
+          <Link 
+            to="/" 
+            className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-slate-600 transition-colors hover:bg-slate-100 hover:text-teal-700"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            Home
+          </Link>
+          <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <span className="text-slate-400">Tag</span>
+          <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <span className="rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 px-3 py-1 font-medium text-emerald-700">
+            #{tag?.name ?? '...'}
+          </span>
+        </nav>
 
-      {isLoading ? (
-        <ArticleTableSkeleton rows={4} />
-      ) : (
-        <div className="rounded-2xl border border-white/70 bg-white/90 shadow-lg shadow-teal-100/60">
-          <Table className="w-full text-sm">
-            <TableHead className="bg-teal-50/70 text-slate-700">
-              <TableHeadCell>Article</TableHeadCell>
-              <TableHeadCell>Category</TableHeadCell>
-              <TableHeadCell>Published</TableHeadCell>
-            </TableHead>
-            <TableBody className="divide-y divide-teal-100/70">
-              {articles.length === 0 ? (
-                <TableRow className="bg-white/80">
-                  <TableCell colSpan={3} className="py-6 text-center text-slate-500">
-                    No articles tagged yet.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                articles.map((article) => (
-                  <TableRow key={article.id} className="bg-white/80">
-                    <TableCell className="space-y-2">
-                      <Link
-                        to={`/articles/${article.slug}`}
-                        className="text-base font-semibold text-slate-900 hover:text-teal-600"
-                      >
-                        {article.title}
-                      </Link>
-                      <p className="text-xs text-slate-500">
-                        {stripHtml(article.content).slice(0, 160)}...
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      {article.category ? (
-                        <Link
-                          to={`/category/${article.category.slug}`}
-                          className="text-sm text-teal-700 hover:text-teal-600"
-                        >
-                          {article.category.name}
-                        </Link>
-                      ) : (
-                        <span className="text-sm text-slate-400">Uncategorized</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-500">
-                      {new Date(article.createdAt).toLocaleDateString()}
-                    </TableCell>
-                  </TableRow>
-                ))
+        {/* Tag Header */}
+        <header className="relative overflow-hidden rounded-3xl border border-slate-200/60 bg-gradient-to-br from-white via-white to-emerald-50/50 p-8 shadow-xl shadow-slate-200/50 md:p-10">
+          <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-gradient-to-br from-emerald-100/60 to-teal-100/60 blur-3xl" />
+          <div className="absolute -left-10 bottom-0 h-40 w-40 rounded-full bg-gradient-to-br from-teal-100/40 to-cyan-100/40 blur-3xl" />
+          
+          <div className="relative">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200/60 bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-2 shadow-sm">
+              <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+              </svg>
+              <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Tag</span>
+            </div>
+            
+            <h1 className="mt-4 bg-gradient-to-r from-slate-900 via-emerald-900 to-slate-900 bg-clip-text text-3xl font-bold text-transparent md:text-4xl">
+              #{tag?.name ?? 'Tag'}
+            </h1>
+            
+            <div className="mt-4 flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2 rounded-xl bg-white/80 px-4 py-2 shadow-sm backdrop-blur-sm">
+                <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="text-sm font-semibold text-slate-700">
+                  {totalCount} article{totalCount === 1 ? '' : 's'}
+                </span>
+              </div>
+              
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-2 shadow-sm">
+                  <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  </svg>
+                  <span className="text-sm font-medium text-emerald-700">
+                    Page {page} of {totalPages}
+                  </span>
+                </div>
               )}
-            </TableBody>
-          </Table>
-          <div className="flex items-center justify-end px-5 py-4">
-            <Pagination
-              currentPage={page}
-              totalPages={totalPages}
-              onPageChange={(nextPage) => {
-                const params = new URLSearchParams(searchParams);
-                params.set('page', nextPage.toString());
-                setSearchParams(params);
-              }}
-              showIcons
-            />
+            </div>
           </div>
-        </div>
-      )}
+        </header>
+
+        {error && (
+          <Alert color="failure" className="rounded-2xl">
+            <span className="font-medium">Tag error.</span> {error}
+          </Alert>
+        )}
+
+        {isLoading ? (
+          <ArticleTableSkeleton rows={4} />
+        ) : (
+          <ArticleList
+            articles={articles}
+            emptyMessage="No articles tagged yet."
+            currentPage={page}
+            totalPages={totalPages}
+            showPagination={articles.length > 0}
+            onPageChange={(nextPage) => {
+              const params = new URLSearchParams(searchParams);
+              params.set('page', nextPage.toString());
+              setSearchParams(params);
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 };
