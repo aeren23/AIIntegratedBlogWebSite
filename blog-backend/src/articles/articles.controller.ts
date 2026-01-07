@@ -29,6 +29,7 @@ import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { ArticleResponseDto } from './dto/article-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/enums/user-role.enum';
@@ -38,12 +39,11 @@ import type { Multer } from 'multer';
 
 @ApiTags('Articles')
 @Controller('articles')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth('JWT-auth')
 export class ArticlesController {
   constructor(private readonly articlesService: ArticlesService) {}
 
   @Get()
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({
     summary: 'Get paginated articles',
     description: 'Retrieve a paginated list of articles with optional filters for category, tags, and keyword search. Visibility rules apply based on user role.',
@@ -243,6 +243,7 @@ export class ArticlesController {
   }
 
   @Get(':slug')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({
     summary: 'Get article by slug',
     description: 'Retrieve a single article by its slug. Access is controlled based on user role and article visibility.',
@@ -307,12 +308,21 @@ export class ArticlesController {
       },
     },
   })
-  async getArticleBySlug(@Param('slug') slug: string) {
-    // For public access, assume USER role
+  async getArticleBySlug(
+    @Param('slug') slug: string,
+    @CurrentUser() user?: { id: string; roles: string[] },
+  ) {
+    // Determine user role - default to USER for unauthenticated requests
+    const requesterRole = user?.roles?.includes('ADMIN') || user?.roles?.includes('SUPERADMIN')
+      ? UserRole.ADMIN
+      : user?.roles?.includes('AUTHOR')
+        ? UserRole.AUTHOR
+        : UserRole.USER;
+
     const result = await this.articlesService.getArticleBySlug(
       slug,
-      UserRole.USER,
-      undefined,
+      requesterRole,
+      user?.id,
     );
 
     return {
