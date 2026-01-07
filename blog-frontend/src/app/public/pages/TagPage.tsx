@@ -64,6 +64,7 @@ const TagPage = () => {
           pageSize: PAGE_SIZE,
           isAscending: false,
           tagSlug: slug,
+          publicOnly: true,
         }),
       ]);
       setTag(tagResponse);

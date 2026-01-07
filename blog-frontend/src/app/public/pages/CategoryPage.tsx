@@ -64,6 +64,7 @@ const CategoryPage = () => {
           pageSize: PAGE_SIZE,
           isAscending: false,
           categorySlug: slug,
+          publicOnly: true,
         }),
       ]);
       setCategory(categoryResponse);

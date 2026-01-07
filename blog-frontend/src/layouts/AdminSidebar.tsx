@@ -1,6 +1,7 @@
 import { Sidebar, SidebarItem, SidebarItemGroup, SidebarItems } from 'flowbite-react';
 import type { ComponentProps, MouseEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { HiSparkles } from 'react-icons/hi';
 
 type AdminSidebarProps = {
   onNavigate?: () => void;
@@ -69,7 +70,7 @@ const AdminSidebar = ({ onNavigate, className }: AdminSidebarProps) => {
   const navigate = useNavigate();
 
   const containerClasses = [
-    'h-full w-64 rounded-none bg-slate-900',
+    'h-full w-64 rounded-none bg-gradient-to-b from-slate-900 via-slate-900 to-violet-950',
     className,
   ]
     .filter(Boolean)
@@ -84,11 +85,11 @@ const AdminSidebar = ({ onNavigate, className }: AdminSidebarProps) => {
       base: 'space-y-1',
     },
     item: {
-      base: 'group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-150 text-slate-600 hover:bg-slate-50 hover:text-slate-900',
-      active: 'bg-teal-50 text-slate-900 border border-teal-200',
+      base: 'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-violet-500/10 hover:text-violet-300',
+      active: 'bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-300 border border-violet-500/30',
       icon: {
-        base: 'h-5 w-5 text-slate-400 transition-colors group-hover:text-slate-700',
-        active: 'text-teal-600',
+        base: 'h-5 w-5 text-slate-500 transition-colors group-hover:text-violet-400',
+        active: 'text-violet-400',
       },
       content: {
         base: 'flex-1 text-left',
@@ -105,20 +106,20 @@ const AdminSidebar = ({ onNavigate, className }: AdminSidebarProps) => {
   return (
     <Sidebar aria-label="Admin navigation" className={containerClasses} theme={sidebarTheme}>
       {/* Header Section */}
-      <div className="mb-6 border-b border-slate-700/50 pb-4">
+      <div className="mb-6 border-b border-violet-500/20 pb-4">
         <div className="flex items-center gap-3 px-1">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 shadow-lg shadow-teal-500/40">
-            <span className="text-sm font-bold text-white">AC</span>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/40">
+            <HiSparkles className="h-5 w-5 text-white" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">Admin Console</p>
-            <p className="text-xs text-slate-400">Control center</p>
+            <p className="text-sm font-semibold bg-gradient-to-r from-violet-300 to-purple-300 bg-clip-text text-transparent">Admin Console</p>
+            <p className="text-xs text-slate-500">AI Blog Platform</p>
           </div>
         </div>
       </div>
 
       {/* Navigation Label */}
-      <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+      <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-violet-400/60">
         Navigation
       </p>
 
@@ -144,8 +145,11 @@ const AdminSidebar = ({ onNavigate, className }: AdminSidebarProps) => {
       </SidebarItems>
 
       {/* Footer */}
-      <div className="absolute bottom-0 left-0 right-0 border-t border-slate-700/50 bg-slate-900/80 p-3">
-        <p className="text-center text-xs text-slate-500">v1.0.0 Blog Admin</p>
+      <div className="absolute bottom-0 left-0 right-0 border-t border-violet-500/20 bg-slate-900/80 p-3 backdrop-blur-sm">
+        <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500">
+          <HiSparkles className="h-3 w-3 text-violet-400" />
+          <span>v1.0.0 AI Blog Admin</span>
+        </div>
       </div>
     </Sidebar>
   );

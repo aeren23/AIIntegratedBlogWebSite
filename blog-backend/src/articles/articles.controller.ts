@@ -97,6 +97,13 @@ export class ArticlesController {
     description: 'Include soft-deleted articles (ADMIN only)',
     example: false,
   })
+  @ApiQuery({
+    name: 'publicOnly',
+    required: false,
+    type: Boolean,
+    description: 'Return only published articles regardless of user role',
+    example: true,
+  })
   @ApiResponse({
     status: 200,
     description: 'Successfully retrieved paginated articles',
@@ -170,6 +177,7 @@ export class ArticlesController {
     @Query('pageSize', new DefaultValuePipe(10), ParseIntPipe) pageSize: number,
     @Query('isAscending', new DefaultValuePipe(false), ParseBoolPipe) isAscending: boolean,
     @Query('includeDeleted', new DefaultValuePipe(false), ParseBoolPipe) includeDeleted: boolean,
+    @Query('publicOnly', new DefaultValuePipe(false), ParseBoolPipe) publicOnly: boolean,
     @Query('categorySlug') categorySlug?: string,
     @Query('tagSlug') tagSlug?: string,
     @Query('keyword') keyword?: string,
@@ -195,6 +203,7 @@ export class ArticlesController {
       pageSize,
       isAscending,
       includeDeleted: canIncludeDeleted,
+      publicOnly,
     });
 
     return {

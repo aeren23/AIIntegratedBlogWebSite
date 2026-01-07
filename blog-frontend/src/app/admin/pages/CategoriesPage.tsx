@@ -80,6 +80,7 @@ const CategoriesPage = () => {
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -126,6 +127,8 @@ const CategoriesPage = () => {
 
     setIsSaving(true);
     setFormError(null);
+    setSuccess(null);
+    setError(null);
     try {
       if (editingCategory) {
         const updated = await updateCategory(editingCategory.id, {
@@ -135,12 +138,14 @@ const CategoriesPage = () => {
         setCategories((prev) =>
           prev.map((item) => (item.id === updated.id ? { ...updated } : item))
         );
+        setSuccess('Category updated successfully.');
       } else {
         const created = await createCategory({
           name: formState.name.trim(),
           slug: formState.slug.trim(),
         });
         setCategories((prev) => [{ ...created, isDeleted: false }, ...prev]);
+        setSuccess('Category created successfully.');
       }
       setIsModalOpen(false);
     } catch (err) {
@@ -154,6 +159,8 @@ const CategoriesPage = () => {
     if (!confirmDelete) {
       return;
     }
+    setSuccess(null);
+    setError(null);
     try {
       await deleteCategory(confirmDelete.id);
       setCategories((prev) =>
@@ -162,6 +169,7 @@ const CategoriesPage = () => {
         )
       );
       setConfirmDelete(null);
+      setSuccess('Category deleted successfully.');
     } catch (err) {
       setError(resolveErrorMessage(err));
     }
@@ -170,8 +178,14 @@ const CategoriesPage = () => {
   return (
     <div className="space-y-6">
       {error && (
-        <Alert color="failure">
+        <Alert color="failure" onDismiss={() => setError(null)}>
           <span className="font-medium">Category error.</span> {error}
+        </Alert>
+      )}
+
+      {success && (
+        <Alert color="success" onDismiss={() => setSuccess(null)}>
+          <span className="font-medium">Success!</span> {success}
         </Alert>
       )}
 

@@ -8,7 +8,7 @@ import UnauthorizedPage from './pages/UnauthorizedPage';
 import NotFoundPage from './pages/NotFoundPage';
 import RoleGuard from '../../guards/RoleGuard';
 import AuthOnlyGuard from '../../guards/AuthOnlyGuard';
-import Profile from '../user/pages/Profile';
+import Profile from './pages/Profile';
 import ArticleDetailPage from './pages/ArticleDetailPage';
 import CategoryPage from './pages/CategoryPage';
 import TagPage from './pages/TagPage';

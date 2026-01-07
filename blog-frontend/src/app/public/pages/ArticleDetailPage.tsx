@@ -2,11 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Badge, Button, Spinner } from 'flowbite-react';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
+import { HiSparkles, HiEye, HiRefresh } from 'react-icons/hi';
 import {
   fetchArticleBySlug,
   fetchArticles,
   type Article,
 } from '../../../api/article.api';
+import {
+  generateArticleSummary,
+  getArticleSummaryStatus,
+  type AiSummaryStatus,
+} from '../../../api/ai.api';
 import {
   createComment,
   deleteComment,
@@ -49,6 +55,12 @@ const ArticleDetailPage = () => {
   const [isCommentsLoading, setIsCommentsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [commentError, setCommentError] = useState<string | null>(null);
+  
+  // AI Summary states
+  const [summaryStatus, setSummaryStatus] = useState<AiSummaryStatus | null>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [isSummaryVisible, setIsSummaryVisible] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
 
   const description = useMemo(
     () => (article?.content ? stripHtml(article.content).slice(0, 160) : ''),
@@ -97,6 +109,7 @@ const ArticleDetailPage = () => {
           pageSize: 4,
           isAscending: false,
           tagSlug: primaryTag.slug,
+          publicOnly: true,
         });
         const filtered = related.items.filter((item) => item.slug !== slug);
         setSimilarArticles(filtered.slice(0, 4));
@@ -127,6 +140,39 @@ const ArticleDetailPage = () => {
     }
   }, [article?.id]);
 
+  // AI Summary: Load status when article loads
+  const loadSummaryStatus = useCallback(async () => {
+    if (!article?.id) return;
+    
+    try {
+      const status = await getArticleSummaryStatus(article.id);
+      setSummaryStatus(status);
+    } catch {
+      // Silently fail - summary is optional
+    }
+  }, [article?.id]);
+
+  // AI Summary: Generate or regenerate
+  const handleGenerateSummary = useCallback(async (regenerate = false) => {
+    if (!article?.id) return;
+
+    setIsSummaryLoading(true);
+    setSummaryError(null);
+    try {
+      const result = await generateArticleSummary(article.id, regenerate);
+      setSummaryStatus({
+        hasSummary: true,
+        summary: result.summary,
+        generatedAt: result.generatedAt,
+      });
+      setIsSummaryVisible(true);
+    } catch (err) {
+      setSummaryError(resolveErrorMessage(err));
+    } finally {
+      setIsSummaryLoading(false);
+    }
+  }, [article?.id]);
+
   useEffect(() => {
     loadArticle();
   }, [loadArticle]);
@@ -134,8 +180,9 @@ const ArticleDetailPage = () => {
   useEffect(() => {
     if (article?.id) {
       loadComments();
+      loadSummaryStatus();
     }
-  }, [article?.id, loadComments]);
+  }, [article?.id, loadComments, loadSummaryStatus]);
 
   const handleCreateComment = useCallback(
     async (content: string, parentCommentId?: string | null) => {
@@ -263,6 +310,86 @@ const ArticleDetailPage = () => {
                   ))}
                 </div>
               </header>
+
+              {/* AI Summary Section */}
+              <div className="mt-6 rounded-xl border border-violet-200/70 bg-gradient-to-br from-violet-50 to-purple-50 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 shadow-md shadow-violet-500/25">
+                      <HiSparkles className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-violet-900">AI Summary</p>
+                      {summaryStatus?.generatedAt && (
+                        <p className="text-xs text-violet-600">
+                          {new Date(summaryStatus.generatedAt).toLocaleDateString('tr-TR')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {summaryStatus?.hasSummary ? (
+                      <>
+                        <Button
+                          size="xs"
+                          color="light"
+                          onClick={() => setIsSummaryVisible(!isSummaryVisible)}
+                          className="!border-violet-200 !bg-white !text-violet-700 hover:!bg-violet-100"
+                        >
+                          <HiEye className="mr-1 h-4 w-4" />
+                          {isSummaryVisible ? 'Hide' : 'Show'} Summary
+                        </Button>
+                        {isAuthenticated && (
+                          <Button
+                            size="xs"
+                            color="light"
+                            onClick={() => handleGenerateSummary(true)}
+                            disabled={isSummaryLoading}
+                            className="!border-violet-200 !bg-white !text-violet-700 hover:!bg-violet-100"
+                          >
+                            <HiRefresh className={`mr-1 h-4 w-4 ${isSummaryLoading ? 'animate-spin' : ''}`} />
+                            Refresh
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      <Button
+                        size="xs"
+                        color="purple"
+                        onClick={() => handleGenerateSummary(false)}
+                        disabled={isSummaryLoading || !isAuthenticated}
+                        className="shadow-md shadow-violet-500/25"
+                      >
+                        {isSummaryLoading ? (
+                          <>
+                            <Spinner size="xs" className="mr-2" />
+                            Creating...
+                          </>
+                        ) : (
+                          <>
+                            <HiSparkles className="mr-1 h-4 w-4" />
+                            {isAuthenticated ? 'Summarize with AI' : 'Please Login to Summarize'}
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {summaryError && (
+                  <Alert color="failure" className="mt-3">
+                    <span className="text-sm">{summaryError}</span>
+                  </Alert>
+                )}
+
+                {isSummaryVisible && summaryStatus?.summary && (
+                  <div className="mt-4 rounded-lg border border-violet-200/50 bg-white/80 p-4">
+                    <p className="text-sm leading-relaxed text-slate-700">{summaryStatus.summary}</p>
+                  </div>
+                )}
+              </div>
+
               <div
                 className="prose prose-slate mt-6 max-w-none"
                 dangerouslySetInnerHTML={{ __html: articleHtml }}

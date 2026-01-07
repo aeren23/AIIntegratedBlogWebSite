@@ -58,6 +58,7 @@ export type ArticleQueryParams = {
   tagSlug?: string;
   keyword?: string;
   includeDeleted?: boolean;
+  publicOnly?: boolean;
 };
 
 export type CreateArticlePayload = {

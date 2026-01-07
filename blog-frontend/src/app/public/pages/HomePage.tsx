@@ -10,7 +10,7 @@ import ArticleList from '../components/ArticleList';
 import ArticleTableSkeleton from '../components/ArticleTableSkeleton';
 import usePageMeta from '../../../hooks/usePageMeta';
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 5;
 
 const resolveErrorMessage = (err: unknown) => {
   if (axios.isAxiosError(err)) {
@@ -52,7 +52,7 @@ const HomePage = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetchArticles({ page, pageSize: PAGE_SIZE, isAscending: false });
+      const response = await fetchArticles({ page, pageSize: PAGE_SIZE, isAscending: false, publicOnly: true });
       setArticles(response.items);
       setTotalCount(response.totalCount);
     } catch (err) {
@@ -66,8 +66,8 @@ const HomePage = () => {
     setIsSidebarLoading(true);
     try {
       const [popularSeed, latest, tags] = await Promise.all([
-        fetchArticles({ page: 1, pageSize: 20, isAscending: false }),
-        fetchArticles({ page: 1, pageSize: 5, isAscending: false }),
+        fetchArticles({ page: 1, pageSize: 20, isAscending: false, publicOnly: true }),
+        fetchArticles({ page: 1, pageSize: 5, isAscending: false, publicOnly: true }),
         fetchTags(),
       ]);
       const popular = [...popularSeed.items]

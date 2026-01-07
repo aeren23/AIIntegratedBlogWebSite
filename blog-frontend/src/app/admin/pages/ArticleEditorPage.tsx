@@ -12,10 +12,18 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import TurndownService from 'turndown';
 import { marked } from 'marked';
+import { HiSparkles, HiEye, HiEyeOff, HiRefresh, HiTrash, HiPlus } from 'react-icons/hi';
 import ArticleEditor from '../../../components/article/ArticleEditor';
-import { fetchCategories, type Category } from '../../../api/category.api';
-import { fetchTags, type Tag } from '../../../api/tag.api';
+import QuickAddModal from '../../../components/common/QuickAddModal';
+import { fetchCategories, createCategory, type Category } from '../../../api/category.api';
+import { fetchTags, createTag, type Tag } from '../../../api/tag.api';
 import { fetchArticleById, updateArticle } from '../../../api/article.api';
+import {
+  generateArticleSummary,
+  getArticleSummaryStatus,
+  clearArticleSummary,
+  type AiSummaryStatus,
+} from '../../../api/ai.api';
 import { hydrateArticleHtml, normalizeArticleHtmlForSave } from '../../../utils/apiAssets';
 
 type ArticleFormState = {
@@ -64,6 +72,16 @@ const ArticleEditorPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [articleDeleted, setArticleDeleted] = useState(false);
 
+  // AI Summary State
+  const [aiSummary, setAiSummary] = useState<AiSummaryStatus | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [showAiSummary, setShowAiSummary] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  // Quick Add Modal State
+  const [quickAddType, setQuickAddType] = useState<'category' | 'tag'>('category');
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+
   const turndownService = useMemo(() => new TurndownService(), []);
 
   const loadEditorData = useCallback(async () => {
@@ -106,6 +124,82 @@ const ArticleEditorPage = () => {
   useEffect(() => {
     loadEditorData();
   }, [loadEditorData]);
+
+  // Load AI summary status
+  const loadAiSummary = useCallback(async () => {
+    if (!articleId) return;
+    
+    setIsAiLoading(true);
+    setAiError(null);
+    try {
+      const status = await getArticleSummaryStatus(articleId);
+      setAiSummary(status);
+    } catch (err) {
+      setAiError(resolveErrorMessage(err));
+    } finally {
+      setIsAiLoading(false);
+    }
+  }, [articleId]);
+
+  useEffect(() => {
+    if (!isLoading && articleId) {
+      void loadAiSummary();
+    }
+  }, [isLoading, articleId, loadAiSummary]);
+
+  const handleGenerateSummary = async (regenerate = false) => {
+    if (!articleId) return;
+    
+    setIsAiLoading(true);
+    setAiError(null);
+    try {
+      const result = await generateArticleSummary(articleId, regenerate);
+      setAiSummary({
+        hasSummary: true,
+        summary: result.summary,
+        generatedAt: result.generatedAt,
+      });
+      setShowAiSummary(true);
+    } catch (err) {
+      setAiError(resolveErrorMessage(err));
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const handleDeleteSummary = async () => {
+    if (!articleId) return;
+    
+    setIsAiLoading(true);
+    setAiError(null);
+    try {
+      await clearArticleSummary(articleId);
+      setAiSummary({ hasSummary: false, summary: null, generatedAt: null });
+      setShowAiSummary(false);
+    } catch (err) {
+      setAiError(resolveErrorMessage(err));
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  // Quick Add Handlers
+  const handleQuickAddCategory = async (name: string, slug: string) => {
+    const newCategory = await createCategory({ name, slug });
+    setCategories((prev) => [...prev, newCategory]);
+    setFormState((prev) => ({ ...prev, categoryId: newCategory.id }));
+  };
+
+  const handleQuickAddTag = async (name: string, slug: string) => {
+    const newTag = await createTag({ name, slug });
+    setTags((prev) => [...prev, newTag]);
+    setFormState((prev) => ({ ...prev, tagIds: [...prev.tagIds, newTag.id] }));
+  };
+
+  const openQuickAdd = (type: 'category' | 'tag') => {
+    setQuickAddType(type);
+    setIsQuickAddOpen(true);
+  };
 
   const handleSave = async () => {
     if (!articleId) {
@@ -201,7 +295,18 @@ const ArticleEditorPage = () => {
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="article-category">Category</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="article-category">Category</Label>
+                    <Button
+                      size="xs"
+                      color="light"
+                      className="!border-violet-200 !text-violet-700 hover:!bg-violet-100"
+                      onClick={() => openQuickAdd('category')}
+                      disabled={articleDeleted}
+                    >
+                      <HiPlus className="mr-1 h-3 w-3" /> Quick Add
+                    </Button>
+                  </div>
                   <Select
                     id="article-category"
                     value={formState.categoryId}
@@ -219,7 +324,18 @@ const ArticleEditorPage = () => {
                   </Select>
                 </div>
                 <div className="space-y-3 md:col-span-2">
-                  <Label>Tags</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Tags</Label>
+                    <Button
+                      size="xs"
+                      color="light"
+                      className="!border-amber-200 !text-amber-700 hover:!bg-amber-100"
+                      onClick={() => openQuickAdd('tag')}
+                      disabled={articleDeleted}
+                    >
+                      <HiPlus className="mr-1 h-3 w-3" /> Quick Add
+                    </Button>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {tags.length === 0 ? (
                       <span className="text-sm text-slate-500">No tags available.</span>
@@ -289,6 +405,95 @@ const ArticleEditorPage = () => {
               and are stored under
               <span className="font-semibold text-slate-700"> /uploads/articles</span>.
             </div>
+
+            {/* AI Summary Management Card */}
+            <div className="rounded-2xl border border-violet-200/60 bg-gradient-to-br from-violet-50 to-purple-50 p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <HiSparkles className="h-4 w-4 text-violet-600" />
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600">
+                  AI Summary
+                </p>
+              </div>
+
+              {aiError && (
+                <Alert color="failure" className="mb-3">
+                  <span className="text-xs">{aiError}</span>
+                </Alert>
+              )}
+
+              {isAiLoading ? (
+                <div className="flex items-center gap-2 text-sm text-violet-600">
+                  <Spinner size="sm" color="purple" />
+                  <span>Processing...</span>
+                </div>
+              ) : aiSummary?.hasSummary ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-violet-600">
+                      Generated: {new Date(aiSummary.generatedAt!).toLocaleDateString('tr-TR')}
+                    </span>
+                    <Button
+                      size="xs"
+                      color="light"
+                      className="!border-violet-200 !text-violet-700 hover:!bg-violet-100"
+                      onClick={() => setShowAiSummary(!showAiSummary)}
+                    >
+                      {showAiSummary ? (
+                        <>
+                          <HiEyeOff className="mr-1 h-3 w-3" /> Hide
+                        </>
+                      ) : (
+                        <>
+                          <HiEye className="mr-1 h-3 w-3" /> View
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {showAiSummary && (
+                    <div className="rounded-lg bg-white/80 p-3 text-sm text-slate-700 border border-violet-100">
+                      {aiSummary.summary}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button
+                      size="xs"
+                      color="light"
+                      className="flex-1 !border-violet-200 !text-violet-700 hover:!bg-violet-100"
+                      onClick={() => handleGenerateSummary(true)}
+                      disabled={isAiLoading || articleDeleted}
+                    >
+                      <HiRefresh className="mr-1 h-3 w-3" /> Regenerate
+                    </Button>
+                    <Button
+                      size="xs"
+                      color="failure"
+                      className="!bg-red-500 hover:!bg-red-600"
+                      onClick={handleDeleteSummary}
+                      disabled={isAiLoading || articleDeleted}
+                    >
+                      <HiTrash className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-500">
+                    No AI summary exists for this article.
+                  </p>
+                  <Button
+                    size="sm"
+                    className="w-full !bg-violet-600 hover:!bg-violet-700 !text-white"
+                    onClick={() => handleGenerateSummary(false)}
+                    disabled={isAiLoading || articleDeleted}
+                  >
+                    <HiSparkles className="mr-2 h-4 w-4" />
+                    Generate Summary
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -297,6 +502,14 @@ const ArticleEditorPage = () => {
           1) Write markdown, save, verify HTML stored in DB (including <img src="/uploads/...">).
           2) Open article and confirm image loads.
           3) Hard delete article and confirm image files removed from disk. */}
+
+      {/* Quick Add Modal */}
+      <QuickAddModal
+        type={quickAddType}
+        isOpen={isQuickAddOpen}
+        onClose={() => setIsQuickAddOpen(false)}
+        onSubmit={quickAddType === 'category' ? handleQuickAddCategory : handleQuickAddTag}
+      />
     </div>
   );
 };

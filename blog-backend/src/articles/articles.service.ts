@@ -55,6 +55,7 @@ export class ArticlesService {
     pageSize?: number;
     isAscending?: boolean;
     includeDeleted?: boolean;
+    publicOnly?: boolean;
   }): Promise<ServiceResponse<PaginatedResult<ArticleResponseDto>>> {
     const {
       requesterRole,
@@ -63,9 +64,10 @@ export class ArticlesService {
       tagSlug,
       keyword,
       page = 1,
-      pageSize: requestedPageSize = 10,
+      pageSize: requestedPageSize = 5,
       isAscending = false,
       includeDeleted = false,
+      publicOnly = false,
     } = params;
 
     // Clamp page size to max 20
@@ -97,8 +99,8 @@ export class ArticlesService {
     // Apply role-based visibility rules
     this.applyVisibilityRules(
       queryBuilder,
-      requesterRole,
-      requesterUserId,
+      publicOnly ? UserRole.USER : requesterRole,
+      publicOnly ? undefined : requesterUserId,
       includeDeleted,
     );
 

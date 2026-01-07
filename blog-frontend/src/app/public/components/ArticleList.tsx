@@ -44,7 +44,7 @@ const resolveCoverImage = (article: Article) => {
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
-  return date.toLocaleDateString('tr-TR', {
+  return date.toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -137,7 +137,7 @@ const ArticleList = ({
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
-                    {article.commentsCount ?? 0} Yorum
+                    {article.commentsCount ?? 0} Comments
                   </span>
                 </div>
 
@@ -186,7 +186,7 @@ const ArticleList = ({
                     </div>
                     <div>
                       <p className="font-semibold text-slate-800">{authorName}</p>
-                      <p className="text-sm text-slate-500">Yazar</p>
+                      <p className="text-sm text-slate-500">Author</p>
                     </div>
                   </div>
 
@@ -195,7 +195,7 @@ const ArticleList = ({
                     to={`/articles/${article.slug}`}
                     className="group/btn flex items-center gap-1.5 rounded-lg bg-teal-500 px-3.5 py-2 text-sm font-medium text-white transition-all hover:bg-teal-600"
                   >
-                    Oku
+                    Read
                     <svg className="h-3.5 w-3.5 transition-transform group-hover/btn:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
@@ -216,7 +216,7 @@ const ArticleList = ({
               totalPages={totalPages}
               onPageChange={onPageChange}
               showIcons
-              className="[&_button]:rounded-lg [&_button]:border-0 [&_button]:px-4 [&_button]:py-2 [&_button]:text-sm [&_button]:font-medium [&_button[aria-current]]:bg-teal-500 [&_button[aria-current]]:text-white"
+              className="[&_button]:cursor-pointer [&_button]:rounded-lg [&_button]:border-0 [&_button]:px-4 [&_button]:py-2 [&_button]:text-sm [&_button]:font-medium [&_button[aria-current]]:pointer-events-none [&_button[aria-current]]:cursor-default [&_button[aria-current]]:bg-teal-500 [&_button[aria-current]]:text-white"
             />
           </div>
         </div>

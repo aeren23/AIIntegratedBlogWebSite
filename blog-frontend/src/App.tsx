@@ -4,7 +4,6 @@ import AdminLayout from './layouts/AdminLayout';
 import RoleGuard from './guards/RoleGuard';
 import adminRoutes from './app/admin/routes';
 import authorRoutes from './app/author/routes';
-import userRoutes from './app/user/routes';
 import publicRoutes from './app/public/routes';
 
 function App() {
@@ -14,16 +13,6 @@ function App() {
         {/* Public & User/Author Layout */}
         <Route path="/" element={<AppLayout />}>
           {publicRoutes}
-          <Route
-            path="user"
-            element={
-              <RoleGuard roles={['USER', 'AUTHOR', 'ADMIN', 'SUPERADMIN']}>
-                <Outlet />
-              </RoleGuard>
-            }
-          >
-            {userRoutes}
-          </Route>
           <Route
             path="author"
             element={

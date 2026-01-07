@@ -85,6 +85,7 @@ const SearchPage = () => {
         pageSize: PAGE_SIZE,
         isAscending: false,
         keyword: queryParam,
+        publicOnly: true,
       });
       setArticles(response.items);
       setTotalCount(response.totalCount);

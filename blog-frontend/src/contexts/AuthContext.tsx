@@ -34,10 +34,8 @@ export const getRoleRedirectPath = (roles: string[] = []) => {
   if (roles.includes('AUTHOR')) {
     return '/author';
   }
-  if (roles.includes('USER')) {
-    return '/user';
-  }
-  return '/';
+  // USER and all other roles go to articles
+  return '/articles';
 };
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {

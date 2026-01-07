@@ -13,9 +13,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import TurndownService from 'turndown';
 import { marked } from 'marked';
+import { HiSparkles, HiEye, HiEyeOff, HiRefresh, HiTrash, HiPlus } from 'react-icons/hi';
 import ArticleEditor from '../../../components/article/ArticleEditor';
-import { fetchCategories, type Category } from '../../../api/category.api';
-import { fetchTags, type Tag } from '../../../api/tag.api';
+import QuickAddModal from '../../../components/common/QuickAddModal';
+import { fetchCategories, createCategory, type Category } from '../../../api/category.api';
+import { fetchTags, createTag, type Tag } from '../../../api/tag.api';
 import {
   createArticle,
   fetchArticleById,
@@ -23,6 +25,12 @@ import {
   type Article,
 } from '../../../api/article.api';
 import { fetchCommentsByArticle, type Comment } from '../../../api/comment.api';
+import {
+  generateArticleSummary,
+  getArticleSummaryStatus,
+  clearArticleSummary,
+  type AiSummaryStatus,
+} from '../../../api/ai.api';
 import CommentSkeleton from '../../../components/comments/CommentSkeleton';
 import CommentTree from '../../../components/comments/CommentTree';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -87,6 +95,16 @@ const AuthorArticleEditorPage = () => {
   const [isCommentsLoading, setIsCommentsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // AI Summary State
+  const [aiSummary, setAiSummary] = useState<AiSummaryStatus | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [showAiSummary, setShowAiSummary] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  // Quick Add Modal State
+  const [quickAddType, setQuickAddType] = useState<'category' | 'tag'>('category');
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
   const turndownService = useMemo(() => new TurndownService(), []);
 
@@ -181,6 +199,82 @@ const AuthorArticleEditorPage = () => {
       void loadComments();
     }
   }, [isNew, loadComments]);
+
+  // Load AI summary status when article is loaded
+  const loadAiSummary = useCallback(async () => {
+    if (!articleId || isNew || !isOwner) return;
+    
+    setIsAiLoading(true);
+    setAiError(null);
+    try {
+      const status = await getArticleSummaryStatus(articleId);
+      setAiSummary(status);
+    } catch (err) {
+      setAiError(resolveErrorMessage(err, 'Unable to load AI summary status.'));
+    } finally {
+      setIsAiLoading(false);
+    }
+  }, [articleId, isNew, isOwner]);
+
+  useEffect(() => {
+    if (!isLoading && !isNew && isOwner && articleId) {
+      void loadAiSummary();
+    }
+  }, [isLoading, isNew, isOwner, articleId, loadAiSummary]);
+
+  const handleGenerateSummary = async (regenerate = false) => {
+    if (!articleId) return;
+    
+    setIsAiLoading(true);
+    setAiError(null);
+    try {
+      const result = await generateArticleSummary(articleId, regenerate);
+      setAiSummary({
+        hasSummary: true,
+        summary: result.summary,
+        generatedAt: result.generatedAt,
+      });
+      setShowAiSummary(true);
+    } catch (err) {
+      setAiError(resolveErrorMessage(err, 'Unable to generate AI summary.'));
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const handleDeleteSummary = async () => {
+    if (!articleId) return;
+    
+    setIsAiLoading(true);
+    setAiError(null);
+    try {
+      await clearArticleSummary(articleId);
+      setAiSummary({ hasSummary: false, summary: null, generatedAt: null });
+      setShowAiSummary(false);
+    } catch (err) {
+      setAiError(resolveErrorMessage(err, 'Unable to delete AI summary.'));
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  // Quick Add handlers
+  const handleQuickAddCategory = async (name: string, slug: string) => {
+    const newCategory = await createCategory({ name, slug });
+    setCategories((prev) => [...prev, newCategory]);
+    setFormState((prev) => ({ ...prev, categoryId: newCategory.id }));
+  };
+
+  const handleQuickAddTag = async (name: string, slug: string) => {
+    const newTag = await createTag({ name, slug });
+    setTags((prev) => [...prev, newTag]);
+    setFormState((prev) => ({ ...prev, tagIds: [...prev.tagIds, newTag.id] }));
+  };
+
+  const openQuickAdd = (type: 'category' | 'tag') => {
+    setQuickAddType(type);
+    setIsQuickAddOpen(true);
+  };
 
   const canEdit = isOwner && !articleDeleted;
 
@@ -326,7 +420,19 @@ const AuthorArticleEditorPage = () => {
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="article-category">Category</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="article-category">Category</Label>
+                    <Button
+                      size="xs"
+                      color="light"
+                      className="!border-violet-200 !text-violet-700 hover:!bg-violet-50"
+                      onClick={() => openQuickAdd('category')}
+                      disabled={!canEdit}
+                    >
+                      <HiPlus className="mr-1 h-3 w-3" />
+                      Quick Add
+                    </Button>
+                  </div>
                   <Select
                     id="article-category"
                     value={formState.categoryId}
@@ -344,7 +450,19 @@ const AuthorArticleEditorPage = () => {
                   </Select>
                 </div>
                 <div className="space-y-3 md:col-span-2">
-                  <Label>Tags</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Tags</Label>
+                    <Button
+                      size="xs"
+                      color="light"
+                      className="!border-amber-200 !text-amber-700 hover:!bg-amber-50"
+                      onClick={() => openQuickAdd('tag')}
+                      disabled={!canEdit}
+                    >
+                      <HiPlus className="mr-1 h-3 w-3" />
+                      Quick Add
+                    </Button>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {tags.length === 0 ? (
                       <span className="text-sm text-slate-500">No tags available.</span>
@@ -424,6 +542,97 @@ const AuthorArticleEditorPage = () => {
                 .
               </div>
             )}
+
+            {/* AI Summary Management Card */}
+            {!isNew && isOwner && (
+              <div className="rounded-2xl border border-violet-200/60 bg-gradient-to-br from-violet-50 to-purple-50 p-4 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <HiSparkles className="h-4 w-4 text-violet-600" />
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600">
+                    AI Summary
+                  </p>
+                </div>
+
+                {aiError && (
+                  <Alert color="failure" className="mb-3">
+                    <span className="text-xs">{aiError}</span>
+                  </Alert>
+                )}
+
+                {isAiLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-violet-600">
+                    <Spinner size="sm" color="purple" />
+                    <span>Processing...</span>
+                  </div>
+                ) : aiSummary?.hasSummary ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-violet-600">
+                        Generated: {new Date(aiSummary.generatedAt!).toLocaleDateString('tr-TR')}
+                      </span>
+                      <Button
+                        size="xs"
+                        color="light"
+                        className="!border-violet-200 !text-violet-700 hover:!bg-violet-100"
+                        onClick={() => setShowAiSummary(!showAiSummary)}
+                      >
+                        {showAiSummary ? (
+                          <>
+                            <HiEyeOff className="mr-1 h-3 w-3" /> Hide
+                          </>
+                        ) : (
+                          <>
+                            <HiEye className="mr-1 h-3 w-3" /> View
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {showAiSummary && (
+                      <div className="rounded-lg bg-white/80 p-3 text-sm text-slate-700 border border-violet-100">
+                        {aiSummary.summary}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <Button
+                        size="xs"
+                        color="light"
+                        className="flex-1 !border-violet-200 !text-violet-700 hover:!bg-violet-100"
+                        onClick={() => handleGenerateSummary(true)}
+                        disabled={isAiLoading}
+                      >
+                        <HiRefresh className="mr-1 h-3 w-3" /> Regenerate
+                      </Button>
+                      <Button
+                        size="xs"
+                        color="failure"
+                        className="!bg-red-500 hover:!bg-red-600"
+                        onClick={handleDeleteSummary}
+                        disabled={isAiLoading}
+                      >
+                        <HiTrash className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-slate-500">
+                      No AI summary exists for this article.
+                    </p>
+                    <Button
+                      size="sm"
+                      className="w-full !bg-violet-600 hover:!bg-violet-700 !text-white"
+                      onClick={() => handleGenerateSummary(false)}
+                      disabled={isAiLoading}
+                    >
+                      <HiSparkles className="mr-2 h-4 w-4" />
+                      Generate Summary
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -458,6 +667,14 @@ const AuthorArticleEditorPage = () => {
           </div>
         </Card>
       )}
+
+      {/* Quick Add Modal */}
+      <QuickAddModal
+        type={quickAddType}
+        isOpen={isQuickAddOpen}
+        onClose={() => setIsQuickAddOpen(false)}
+        onSubmit={quickAddType === 'category' ? handleQuickAddCategory : handleQuickAddTag}
+      />
     </div>
   );
 };

@@ -90,6 +90,7 @@ const ArticlesPage = () => {
   const [includeDeleted, setIncludeDeleted] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
 
@@ -126,13 +127,18 @@ const ArticlesPage = () => {
     }
 
     setIsActionLoading(true);
+    setSuccess(null);
+    setError(null);
     try {
       if (confirmAction.type === 'softDelete') {
         await softDeleteArticle(confirmAction.article.id);
+        setSuccess('Article soft deleted successfully.');
       } else if (confirmAction.type === 'restore') {
         await restoreArticle(confirmAction.article.id);
+        setSuccess('Article restored successfully.');
       } else if (confirmAction.type === 'hardDelete') {
         await hardDeleteArticle(confirmAction.article.id);
+        setSuccess('Article permanently deleted.');
       }
 
       await loadArticles();
@@ -176,8 +182,14 @@ const ArticlesPage = () => {
   return (
     <div className="space-y-6">
       {error && (
-        <Alert color="failure">
+        <Alert color="failure" onDismiss={() => setError(null)}>
           <span className="font-medium">Article error.</span> {error}
+        </Alert>
+      )}
+
+      {success && (
+        <Alert color="success" onDismiss={() => setSuccess(null)}>
+          <span className="font-medium">Success!</span> {success}
         </Alert>
       )}
 

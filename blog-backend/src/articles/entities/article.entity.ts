@@ -30,6 +30,13 @@ export class Article extends BaseEntity {
   @Column({ default: false })
   isPublished: boolean;
 
+  // AI Generated Summary
+  @Column({ type: 'text', nullable: true })
+  aiSummary: string | null;
+
+  @Column({ type: 'datetime', nullable: true })
+  aiSummaryGeneratedAt: Date | null;
+
   @ManyToOne(() => User, (user) => user.articles, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'authorId' })
   author: User;

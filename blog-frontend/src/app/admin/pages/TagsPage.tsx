@@ -74,6 +74,7 @@ const TagsPage = () => {
   const [tags, setTags] = useState<AdminTag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -120,6 +121,8 @@ const TagsPage = () => {
 
     setIsSaving(true);
     setFormError(null);
+    setSuccess(null);
+    setError(null);
     try {
       if (editingTag) {
         const updated = await updateTag(editingTag.id, {
@@ -127,12 +130,14 @@ const TagsPage = () => {
           slug: formState.slug.trim(),
         });
         setTags((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+        setSuccess('Tag updated successfully.');
       } else {
         const created = await createTag({
           name: formState.name.trim(),
           slug: formState.slug.trim(),
         });
         setTags((prev) => [{ ...created, isDeleted: false }, ...prev]);
+        setSuccess('Tag created successfully.');
       }
       setIsModalOpen(false);
     } catch (err) {
@@ -146,6 +151,8 @@ const TagsPage = () => {
     if (!confirmDelete) {
       return;
     }
+    setSuccess(null);
+    setError(null);
     try {
       await deleteTag(confirmDelete.id);
       setTags((prev) =>
@@ -154,6 +161,7 @@ const TagsPage = () => {
         )
       );
       setConfirmDelete(null);
+      setSuccess('Tag deleted successfully.');
     } catch (err) {
       setError(resolveErrorMessage(err));
     }
@@ -162,8 +170,14 @@ const TagsPage = () => {
   return (
     <div className="space-y-6">
       {error && (
-        <Alert color="failure">
+        <Alert color="failure" onDismiss={() => setError(null)}>
           <span className="font-medium">Tag error.</span> {error}
+        </Alert>
+      )}
+
+      {success && (
+        <Alert color="success" onDismiss={() => setSuccess(null)}>
+          <span className="font-medium">Success!</span> {success}
         </Alert>
       )}
 

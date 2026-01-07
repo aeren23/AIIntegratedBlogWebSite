@@ -118,6 +118,7 @@ const UsersPage = () => {
   const [roles, setRoles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [roleModalUser, setRoleModalUser] = useState<UserRecord | null>(null);
   const [roleSelection, setRoleSelection] = useState<string[]>([]);
   const [roleModalError, setRoleModalError] = useState<string | null>(null);
@@ -163,6 +164,8 @@ const UsersPage = () => {
 
     setIsRoleSaving(true);
     setRoleModalError(null);
+    setSuccess(null);
+    setError(null);
 
     const currentRoles = roleModalUser.roles;
     const nextRoles = roleSelection;
@@ -179,6 +182,7 @@ const UsersPage = () => {
 
       await loadUsers();
       setRoleModalUser(null);
+      setSuccess('User roles updated successfully.');
     } catch (err) {
       setRoleModalError(resolveErrorMessage(err));
     } finally {
@@ -192,13 +196,17 @@ const UsersPage = () => {
     }
 
     setIsActionLoading(true);
+    setSuccess(null);
+    setError(null);
     try {
       if (confirmAction.type === 'deactivate') {
         await deactivateUser(confirmAction.user.id);
+        setSuccess('User deactivated successfully.');
       }
 
       if (confirmAction.type === 'hardDelete') {
         await hardDeleteUser(confirmAction.user.id);
+        setSuccess('User permanently deleted.');
       }
 
       await loadUsers();
@@ -213,9 +221,11 @@ const UsersPage = () => {
   const handleActivate = async (userId: string) => {
     setActivatingUserId(userId);
     setError(null);
+    setSuccess(null);
     try {
       await activateUser(userId);
       await loadUsers();
+      setSuccess('User activated successfully.');
     } catch (err) {
       setError(resolveErrorMessage(err));
     } finally {
@@ -247,8 +257,14 @@ const UsersPage = () => {
   return (
     <div className="space-y-6">
       {error && (
-        <Alert color="failure">
+        <Alert color="failure" onDismiss={() => setError(null)}>
           <span className="font-medium">User management error.</span> {error}
+        </Alert>
+      )}
+
+      {success && (
+        <Alert color="success" onDismiss={() => setSuccess(null)}>
+          <span className="font-medium">Success!</span> {success}
         </Alert>
       )}
 
