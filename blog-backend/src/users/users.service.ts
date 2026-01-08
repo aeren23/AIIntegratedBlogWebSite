@@ -93,13 +93,37 @@ export class UsersService {
   }
 
   /**
-   * Assign a role to a user (ADMIN only)
+   * Assign a role to a user
+   * - SUPERADMIN can assign any role
+   * - ADMIN can only assign AUTHOR role
    */
   async assignRoleToUser(
     userId: string,
     roleName: UserRole,
+    requesterRole: UserRole,
   ): Promise<ServiceResponse<void>> {
     try {
+      // Permission check: Only SUPERADMIN can assign ADMIN or SUPERADMIN roles
+      if (
+        (roleName === UserRole.ADMIN || roleName === UserRole.SUPERADMIN) &&
+        requesterRole !== UserRole.SUPERADMIN
+      ) {
+        return ServiceResponse.fail(
+          'Only SUPERADMIN can assign ADMIN or SUPERADMIN roles',
+        );
+      }
+
+      // ADMIN can only assign AUTHOR role (and USER implicitly)
+      if (
+        requesterRole === UserRole.ADMIN &&
+        roleName !== UserRole.AUTHOR &&
+        roleName !== UserRole.USER
+      ) {
+        return ServiceResponse.fail(
+          'ADMIN can only assign USER or AUTHOR roles',
+        );
+      }
+
       // Find user
       const user = await this.userRepository.findOne({
         where: { id: userId },
@@ -142,8 +166,7 @@ export class UsersService {
 
       await this.userRoleRepository.save(userRole);
 
-      // TODO: Log this action in LogService when implemented
-      console.log(`Role "${roleName}" assigned to user ${userId}`);
+      console.log(`Role "${roleName}" assigned to user ${userId} by ${requesterRole}`);
 
       return ServiceResponse.ok(null);
     } catch (error) {
@@ -153,13 +176,37 @@ export class UsersService {
   }
 
   /**
-   * Remove a role from a user (ADMIN only)
+   * Remove a role from a user
+   * - SUPERADMIN can remove any role
+   * - ADMIN can only remove AUTHOR role
    */
   async removeRoleFromUser(
     userId: string,
     roleName: UserRole,
+    requesterRole: UserRole,
   ): Promise<ServiceResponse<void>> {
     try {
+      // Permission check: Only SUPERADMIN can remove ADMIN or SUPERADMIN roles
+      if (
+        (roleName === UserRole.ADMIN || roleName === UserRole.SUPERADMIN) &&
+        requesterRole !== UserRole.SUPERADMIN
+      ) {
+        return ServiceResponse.fail(
+          'Only SUPERADMIN can remove ADMIN or SUPERADMIN roles',
+        );
+      }
+
+      // ADMIN can only remove AUTHOR role
+      if (
+        requesterRole === UserRole.ADMIN &&
+        roleName !== UserRole.AUTHOR &&
+        roleName !== UserRole.USER
+      ) {
+        return ServiceResponse.fail(
+          'ADMIN can only remove USER or AUTHOR roles',
+        );
+      }
+
       // Find user
       const user = await this.userRepository.findOne({
         where: { id: userId },
@@ -190,19 +237,17 @@ export class UsersService {
         return ServiceResponse.fail('User does not have this role');
       }
 
-      // Business rule: Prevent removing the last ADMIN role from the system
-      if (roleName === UserRole.ADMIN || roleName === UserRole.SUPERADMIN) {
-        const adminCount = await this.userRoleRepository
+      // Business rule: Prevent removing the last SUPERADMIN role from the system
+      if (roleName === UserRole.SUPERADMIN) {
+        const superadminCount = await this.userRoleRepository
           .createQueryBuilder('ur')
           .innerJoin('ur.role', 'role')
-          .where('role.name IN (:...roles)', {
-            roles: [UserRole.ADMIN, UserRole.SUPERADMIN],
-          })
+          .where('role.name = :role', { role: UserRole.SUPERADMIN })
           .getCount();
 
-        if (adminCount <= 1) {
+        if (superadminCount <= 1) {
           return ServiceResponse.fail(
-            'Cannot remove the last admin role from the system',
+            'Cannot remove the last SUPERADMIN role from the system',
           );
         }
       }
@@ -210,8 +255,7 @@ export class UsersService {
       // Remove UserRole record
       await this.userRoleRepository.remove(userRole);
 
-      // TODO: Log this action in LogService when implemented
-      console.log(`Role "${roleName}" removed from user ${userId}`);
+      console.log(`Role "${roleName}" removed from user ${userId} by ${requesterRole}`);
 
       return ServiceResponse.ok(null);
     } catch (error) {
@@ -221,10 +265,14 @@ export class UsersService {
   }
 
   /**
-   * Deactivate a user (ADMIN only)
-   * Does NOT hard delete - sets isActive to false
+   * Deactivate a user
+   * - SUPERADMIN can deactivate anyone (except last SUPERADMIN)
+   * - ADMIN can only deactivate USER and AUTHOR (not other ADMIN or SUPERADMIN)
    */
-  async deactivateUser(userId: string): Promise<ServiceResponse<void>> {
+  async deactivateUser(
+    userId: string,
+    requesterRole: UserRole,
+  ): Promise<ServiceResponse<void>> {
     try {
       const user = await this.userRepository.findOne({
         where: { id: userId },
@@ -239,27 +287,36 @@ export class UsersService {
         return ServiceResponse.fail('User is already deactivated');
       }
 
-      // Business rule: Prevent deactivating the last admin
-      const isAdmin = user.userRoles?.some(
-        (ur) =>
-          ur.role?.name === UserRole.ADMIN ||
-          ur.role?.name === UserRole.SUPERADMIN,
+      // Check target user's highest role
+      const targetIsAdmin = user.userRoles?.some(
+        (ur) => ur.role?.name === UserRole.ADMIN,
+      );
+      const targetIsSuperAdmin = user.userRoles?.some(
+        (ur) => ur.role?.name === UserRole.SUPERADMIN,
       );
 
-      if (isAdmin) {
-        const activeAdminCount = await this.userRepository
+      // Business rule: ADMIN cannot deactivate ADMIN or SUPERADMIN
+      if (requesterRole === UserRole.ADMIN && (targetIsAdmin || targetIsSuperAdmin)) {
+        return ServiceResponse.fail(
+          'ADMIN cannot deactivate users with ADMIN or SUPERADMIN roles',
+        );
+      }
+
+      // Business rule: Prevent deactivating the last SUPERADMIN
+      const isSuperAdmin = targetIsSuperAdmin;
+
+      if (isSuperAdmin) {
+        const activeSuperAdminCount = await this.userRepository
           .createQueryBuilder('user')
           .innerJoin('user.userRoles', 'ur')
           .innerJoin('ur.role', 'role')
           .where('user.isActive = :isActive', { isActive: true })
-          .andWhere('role.name IN (:...roles)', {
-            roles: [UserRole.ADMIN, UserRole.SUPERADMIN],
-          })
+          .andWhere('role.name = :role', { role: UserRole.SUPERADMIN })
           .getCount();
 
-        if (activeAdminCount <= 1) {
+        if (activeSuperAdminCount <= 1) {
           return ServiceResponse.fail(
-            'Cannot deactivate the last active admin user',
+            'Cannot deactivate the last active SUPERADMIN user',
           );
         }
       }
@@ -327,27 +384,23 @@ export class UsersService {
         return ServiceResponse.fail('Account is already deactivated');
       }
 
-      // Business rule: Prevent last admin from deleting their account
-      const isAdmin = user.userRoles?.some(
-        (ur) =>
-          ur.role?.name === UserRole.ADMIN ||
-          ur.role?.name === UserRole.SUPERADMIN,
+      // Business rule: Prevent last SUPERADMIN from deleting their account
+      const isSuperAdmin = user.userRoles?.some(
+        (ur) => ur.role?.name === UserRole.SUPERADMIN,
       );
 
-      if (isAdmin) {
-        const activeAdminCount = await this.userRepository
+      if (isSuperAdmin) {
+        const activeSuperAdminCount = await this.userRepository
           .createQueryBuilder('user')
           .innerJoin('user.userRoles', 'ur')
           .innerJoin('ur.role', 'role')
           .where('user.isActive = :isActive', { isActive: true })
-          .andWhere('role.name IN (:...roles)', {
-            roles: [UserRole.ADMIN, UserRole.SUPERADMIN],
-          })
+          .andWhere('role.name = :role', { role: UserRole.SUPERADMIN })
           .getCount();
 
-        if (activeAdminCount <= 1) {
+        if (activeSuperAdminCount <= 1) {
           return ServiceResponse.fail(
-            'Cannot delete account: You are the last active admin',
+            'Cannot delete account: You are the last active SUPERADMIN',
           );
         }
       }
@@ -366,12 +419,14 @@ export class UsersService {
   }
 
   /**
-   * Hard delete user (ADMIN only)
-   * Permanently removes user and all related data from database
+   * Hard delete user
+   * - SUPERADMIN can delete anyone (except last SUPERADMIN)
+   * - ADMIN can only delete USER and AUTHOR (not other ADMIN or SUPERADMIN)
    */
   async hardDeleteUser(
     userId: string,
     requesterId: string,
+    requesterRole: UserRole,
   ): Promise<ServiceResponse<void>> {
     try {
       const user = await this.userRepository.findOne({
@@ -388,27 +443,36 @@ export class UsersService {
         return ServiceResponse.fail('Cannot delete your own account via hard delete');
       }
 
-      // Business rule: Prevent deleting last admin
-      const isAdmin = user.userRoles?.some(
-        (ur) =>
-          ur.role?.name === UserRole.ADMIN ||
-          ur.role?.name === UserRole.SUPERADMIN,
+      // Check target user's roles
+      const targetIsAdmin = user.userRoles?.some(
+        (ur) => ur.role?.name === UserRole.ADMIN,
+      );
+      const targetIsSuperAdmin = user.userRoles?.some(
+        (ur) => ur.role?.name === UserRole.SUPERADMIN,
       );
 
-      if (isAdmin) {
-        const activeAdminCount = await this.userRepository
+      // Business rule: ADMIN cannot delete ADMIN or SUPERADMIN
+      if (requesterRole === UserRole.ADMIN && (targetIsAdmin || targetIsSuperAdmin)) {
+        return ServiceResponse.fail(
+          'ADMIN cannot delete users with ADMIN or SUPERADMIN roles',
+        );
+      }
+
+      // Business rule: Prevent deleting last SUPERADMIN
+      const isSuperAdmin = targetIsSuperAdmin;
+
+      if (isSuperAdmin) {
+        const activeSuperAdminCount = await this.userRepository
           .createQueryBuilder('user')
           .innerJoin('user.userRoles', 'ur')
           .innerJoin('ur.role', 'role')
           .where('user.isActive = :isActive', { isActive: true })
-          .andWhere('role.name IN (:...roles)', {
-            roles: [UserRole.ADMIN, UserRole.SUPERADMIN],
-          })
+          .andWhere('role.name = :role', { role: UserRole.SUPERADMIN })
           .getCount();
 
-        if (activeAdminCount <= 1) {
+        if (activeSuperAdminCount <= 1) {
           return ServiceResponse.fail(
-            'Cannot delete the last admin user',
+            'Cannot delete the last SUPERADMIN user',
           );
         }
       }

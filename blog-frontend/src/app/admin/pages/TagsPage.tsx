@@ -20,6 +20,7 @@ import axios from 'axios';
 import AdminTableWrapper from '../components/AdminTableWrapper';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 import StatusBadge from '../components/StatusBadge';
+import { useToast } from '../../../contexts/ToastContext';
 import { createTag, deleteTag, fetchTags, updateTag, type Tag } from '../../../api/tag.api';
 
 type AdminTag = Tag & { isDeleted?: boolean };
@@ -71,6 +72,7 @@ const resolveErrorMessage = (err: unknown) => {
 };
 
 const TagsPage = () => {
+  const { showSuccess, showError } = useToast();
   const [tags, setTags] = useState<AdminTag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -131,6 +133,7 @@ const TagsPage = () => {
         });
         setTags((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
         setSuccess('Tag updated successfully.');
+        showSuccess('Tag updated successfully.');
       } else {
         const created = await createTag({
           name: formState.name.trim(),
@@ -138,10 +141,12 @@ const TagsPage = () => {
         });
         setTags((prev) => [{ ...created, isDeleted: false }, ...prev]);
         setSuccess('Tag created successfully.');
+        showSuccess('Tag created successfully.');
       }
       setIsModalOpen(false);
     } catch (err) {
       setFormError(resolveErrorMessage(err));
+      showError(resolveErrorMessage(err));
     } finally {
       setIsSaving(false);
     }
@@ -162,8 +167,10 @@ const TagsPage = () => {
       );
       setConfirmDelete(null);
       setSuccess('Tag deleted successfully.');
+      showSuccess('Tag deleted successfully.');
     } catch (err) {
       setError(resolveErrorMessage(err));
+      showError(resolveErrorMessage(err));
     }
   };
 

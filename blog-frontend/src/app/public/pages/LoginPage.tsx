@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { loginApi } from '../../../api/auth.api';
 import { getRoleRedirectPath, useAuth } from '../../../contexts/AuthContext';
+import { useToast } from '../../../contexts/ToastContext';
 
 const cardTheme = {
   root: {
@@ -20,6 +21,7 @@ type LoginFormState = {
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated, isLoading, user } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [formState, setFormState] = useState<LoginFormState>({
     username: '',
     password: '',
@@ -78,8 +80,11 @@ const LoginPage = () => {
         password: formState.password,
       });
       await login(response.accessToken);
+      showSuccess('Welcome back! Signed in successfully.');
     } catch (error) {
-      setFormError(resolveErrorMessage(error));
+      const errorMsg = resolveErrorMessage(error);
+      setFormError(errorMsg);
+      showError(errorMsg);
     } finally {
       setIsSubmitting(false);
     }

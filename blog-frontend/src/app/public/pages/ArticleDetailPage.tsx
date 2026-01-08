@@ -25,6 +25,7 @@ import CommentForm from '../../../components/comments/CommentForm';
 import CommentSkeleton from '../../../components/comments/CommentSkeleton';
 import CommentTree from '../../../components/comments/CommentTree';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useToast } from '../../../contexts/ToastContext';
 import { hydrateArticleHtml, resolveApiAssetUrl } from '../../../utils/apiAssets';
 import usePageMeta from '../../../hooks/usePageMeta';
 
@@ -48,6 +49,7 @@ const resolveErrorMessage = (err: unknown) => {
 const ArticleDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { isAuthenticated } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [article, setArticle] = useState<Article | null>(null);
   const [similarArticles, setSimilarArticles] = useState<Article[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -102,20 +104,35 @@ const ArticleDetailPage = () => {
       const articleResponse = await fetchArticleBySlug(slug);
       setArticle(articleResponse);
 
+      // Try to fetch related articles by tag first, then by category
+      let relatedItems: Article[] = [];
+      
+      // First try with primary tag
       if (articleResponse.tags?.length) {
         const primaryTag = articleResponse.tags[0];
         const related = await fetchArticles({
           page: 1,
-          pageSize: 4,
+          pageSize: 5,
           isAscending: false,
           tagSlug: primaryTag.slug,
           publicOnly: true,
         });
-        const filtered = related.items.filter((item) => item.slug !== slug);
-        setSimilarArticles(filtered.slice(0, 4));
-      } else {
-        setSimilarArticles([]);
+        relatedItems = related.items.filter((item) => item.slug !== slug);
       }
+      
+      // If no results from tag, try with category
+      if (relatedItems.length === 0 && articleResponse.category?.slug) {
+        const related = await fetchArticles({
+          page: 1,
+          pageSize: 5,
+          isAscending: false,
+          categorySlug: articleResponse.category.slug,
+          publicOnly: true,
+        });
+        relatedItems = related.items.filter((item) => item.slug !== slug);
+      }
+      
+      setSimilarArticles(relatedItems.slice(0, 4));
     } catch (err) {
       setError(resolveErrorMessage(err));
     } finally {
@@ -196,9 +213,11 @@ const ArticleDetailPage = () => {
           parentCommentId: parentCommentId ?? undefined,
         });
         await loadComments();
+        showSuccess('Comment added successfully!');
       } catch (err) {
         const message = resolveErrorMessage(err);
         setCommentError(message);
+        showError(message);
         throw new Error(message);
       }
     },
@@ -211,9 +230,11 @@ const ArticleDetailPage = () => {
       try {
         await updateComment(commentId, { content });
         await loadComments();
+        showSuccess('Comment updated successfully!');
       } catch (err) {
         const message = resolveErrorMessage(err);
         setCommentError(message);
+        showError(message);
         throw new Error(message);
       }
     },
@@ -226,8 +247,11 @@ const ArticleDetailPage = () => {
       try {
         await deleteComment(commentId);
         await loadComments();
+        showSuccess('Comment deleted successfully!');
       } catch (err) {
-        setCommentError(resolveErrorMessage(err));
+        const errorMsg = resolveErrorMessage(err);
+        setCommentError(errorMsg);
+        showError(errorMsg);
       }
     },
     [loadComments],
@@ -239,8 +263,11 @@ const ArticleDetailPage = () => {
       try {
         await hardDeleteComment(commentId);
         await loadComments();
+        showSuccess('Comment permanently deleted!');
       } catch (err) {
-        setCommentError(resolveErrorMessage(err));
+        const errorMsg = resolveErrorMessage(err);
+        setCommentError(errorMsg);
+        showError(errorMsg);
       }
     },
     [loadComments],

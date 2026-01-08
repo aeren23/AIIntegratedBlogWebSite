@@ -76,8 +76,11 @@ export class SeedService implements OnModuleInit {
     const adminRole = await this.roleRepository.findOne({
       where: { name: 'ADMIN' },
     });
+    const superAdminRole = await this.roleRepository.findOne({
+      where: { name: 'SUPERADMIN' },
+    });
 
-    // Seed Admin User
+    // Seed Admin User (with SUPERADMIN role)
     const existingAdmin = await this.userRepository.findOne({
       where: { username: 'admin' },
     });
@@ -107,7 +110,7 @@ export class SeedService implements OnModuleInit {
 
       await this.userProfileRepository.save(adminProfile);
 
-      // Assign ADMIN role
+      // Assign ADMIN and SUPERADMIN roles
       if (adminRole) {
         await this.userRoleRepository.save(
           this.userRoleRepository.create({
@@ -116,12 +119,38 @@ export class SeedService implements OnModuleInit {
           }),
         );
       }
+      if (superAdminRole) {
+        await this.userRoleRepository.save(
+          this.userRoleRepository.create({
+            userId: admin.id,
+            roleId: superAdminRole.id,
+          }),
+        );
+      }
 
       console.log(
-        '✅ Admin user created: admin / Admin123! (ADMIN role assigned)',
+        '✅ Admin user created: admin / Admin123! (ADMIN + SUPERADMIN roles assigned)',
       );
     } else {
-      console.log('Admin user already exists');
+      // Check if existing admin has SUPERADMIN role, if not add it
+      const existingRoles = await this.userRoleRepository.find({
+        where: { userId: existingAdmin.id },
+        relations: ['role'],
+      });
+      
+      const hasSuperAdmin = existingRoles.some(ur => ur.role?.name === 'SUPERADMIN');
+      
+      if (!hasSuperAdmin && superAdminRole) {
+        await this.userRoleRepository.save(
+          this.userRoleRepository.create({
+            userId: existingAdmin.id,
+            roleId: superAdminRole.id,
+          }),
+        );
+        console.log('✅ SUPERADMIN role added to existing admin user');
+      } else {
+        console.log('Admin user already exists with SUPERADMIN role');
+      }
     }
 
     // Seed Test Author User

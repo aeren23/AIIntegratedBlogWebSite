@@ -22,6 +22,7 @@
     "react-dom": "^19.2.0",
     "react-icons": "^5.5.0",
     "react-router-dom": "^6.30.2",
+    "sonner": "^2.0.7",
     "tailwindcss": "^4.1.18",
     "turndown": "^7.2.2"
   },

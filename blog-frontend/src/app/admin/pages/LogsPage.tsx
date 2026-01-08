@@ -3,7 +3,6 @@ import {
   Alert,
   Button,
   Label,
-  Pagination,
   Spinner,
   Table,
   TableBody,
@@ -16,6 +15,7 @@ import {
 import axios from 'axios';
 import AdminTableWrapper from '../components/AdminTableWrapper';
 import ConfirmModal from '../../../components/common/ConfirmModal';
+import Pagination from '../../../components/common/Pagination';
 import { deleteLog, fetchLogs, type LogEntry } from '../../../api/log.api';
 
 type LogFilters = {
@@ -253,12 +253,12 @@ const LogsPage = () => {
           )}
         </div>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-6 flex justify-center">
           <Pagination
             currentPage={page}
             totalPages={totalPages}
             onPageChange={setPage}
-            showIcons
+            theme="violet"
           />
         </div>
       </AdminTableWrapper>

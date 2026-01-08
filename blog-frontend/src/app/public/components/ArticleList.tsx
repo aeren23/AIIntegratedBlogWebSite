@@ -1,7 +1,7 @@
-import { Pagination } from 'flowbite-react';
 import { Link } from 'react-router-dom';
 import type { Article } from '../../../api/article.api';
 import { resolveApiAssetUrl } from '../../../utils/apiAssets';
+import Pagination from '../../../components/common/Pagination';
 
 type ArticleListProps = {
   articles: Article[];
@@ -209,16 +209,13 @@ const ArticleList = ({
 
       {/* Pagination */}
       {shouldShowPagination && onPageChange && totalPages && (
-        <div className="flex justify-center pt-6">
-          <div className="inline-flex items-center rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={onPageChange}
-              showIcons
-              className="[&_button]:cursor-pointer [&_button]:rounded-lg [&_button]:border-0 [&_button]:px-4 [&_button]:py-2 [&_button]:text-sm [&_button]:font-medium [&_button[aria-current]]:pointer-events-none [&_button[aria-current]]:cursor-default [&_button[aria-current]]:bg-teal-500 [&_button[aria-current]]:text-white"
-            />
-          </div>
+        <div className="flex justify-center pt-8">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+            theme="teal"
+          />
         </div>
       )}
     </div>

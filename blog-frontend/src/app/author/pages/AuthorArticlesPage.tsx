@@ -3,7 +3,6 @@ import {
   Alert,
   Badge,
   Button,
-  Pagination,
   Spinner,
   Table,
   TableBody,
@@ -16,6 +15,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { fetchArticles, updateArticle, type Article } from '../../../api/article.api';
 import { useAuth } from '../../../contexts/AuthContext';
+import Pagination from '../../../components/common/Pagination';
 
 const actionButtonBase =
   'gap-1.5 !rounded-lg !px-2.5 !py-1.5 text-xs font-semibold shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40';
@@ -233,12 +233,12 @@ const AuthorArticlesPage = () => {
               </TableBody>
             </Table>
           </div>
-          <div className="flex items-center justify-end px-5 py-4">
+          <div className="flex items-center justify-center px-5 py-6">
             <Pagination
               currentPage={page}
               totalPages={totalPages}
               onPageChange={setPage}
-              showIcons
+              theme="indigo"
             />
           </div>
         </div>

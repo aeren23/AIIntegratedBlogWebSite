@@ -3,6 +3,7 @@ import { NavLink, Outlet, Link } from 'react-router-dom';
 import { Badge, Button } from 'flowbite-react';
 import { HiSparkles } from 'react-icons/hi';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import ConfirmModal from '../components/common/ConfirmModal';
 
 const navLinkClass =
@@ -11,6 +12,7 @@ const navLinkActiveClass = 'text-sm font-semibold text-violet-600';
 
 const AppLayout = () => {
   const { isAuthenticated, user, logout } = useAuth();
+  const { showSuccess } = useToast();
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const roles = user?.roles ?? [];
   const isAdmin = roles.includes('ADMIN') || roles.includes('SUPERADMIN');
@@ -160,6 +162,7 @@ const AppLayout = () => {
         onConfirm={() => {
           setIsLogoutOpen(false);
           logout();
+          showSuccess('Logged out successfully!');
         }}
         onCancel={() => setIsLogoutOpen(false)}
       />

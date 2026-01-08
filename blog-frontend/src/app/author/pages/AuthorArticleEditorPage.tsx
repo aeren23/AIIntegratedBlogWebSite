@@ -34,6 +34,7 @@ import {
 import CommentSkeleton from '../../../components/comments/CommentSkeleton';
 import CommentTree from '../../../components/comments/CommentTree';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useToast } from '../../../contexts/ToastContext';
 import { hydrateArticleHtml, normalizeArticleHtmlForSave } from '../../../utils/apiAssets';
 
 type ArticleFormState = {
@@ -74,6 +75,7 @@ const AuthorArticleEditorPage = () => {
   const { articleId } = useParams<{ articleId: string }>();
   const navigate = useNavigate();
   const { user, isLoading: isAuthLoading } = useAuth();
+  const { showSuccess, showError } = useToast();
   const isNew = !articleId;
   const [formState, setFormState] = useState<ArticleFormState>({
     title: '',
@@ -304,6 +306,7 @@ const AuthorArticleEditorPage = () => {
           isPublished: formState.isPublished,
           tagIds: formState.tagIds,
         });
+        showSuccess('Article created successfully!');
         navigate(`/author/articles/${created.id}/edit`);
         return;
       }
@@ -322,8 +325,11 @@ const AuthorArticleEditorPage = () => {
         tagIds: formState.tagIds,
       });
       setSuccess('Changes saved successfully.');
+      showSuccess('Changes saved successfully.');
     } catch (err) {
-      setError(resolveErrorMessage(err, 'Unable to save article.'));
+      const errorMsg = resolveErrorMessage(err, 'Unable to save article.');
+      setError(errorMsg);
+      showError(errorMsg);
     } finally {
       setIsSaving(false);
     }

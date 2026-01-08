@@ -3,7 +3,6 @@ import {
   Alert,
   Badge,
   Button,
-  Pagination,
   Spinner,
   Table,
   TableBody,
@@ -17,6 +16,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import AdminTableWrapper from '../components/AdminTableWrapper';
 import ConfirmModal from '../../../components/common/ConfirmModal';
+import Pagination from '../../../components/common/Pagination';
 import {
   fetchArticles,
   hardDeleteArticle,
@@ -366,8 +366,13 @@ const ArticlesPage = () => {
           </div>
         )}
 
-        <div className="mt-4 flex justify-end">
-          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} showIcons />
+        <div className="mt-6 flex justify-center">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            theme="violet"
+          />
         </div>
       </AdminTableWrapper>
 

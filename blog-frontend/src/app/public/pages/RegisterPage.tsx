@@ -5,6 +5,7 @@ import axios from 'axios';
 import { HiCheck, HiX } from 'react-icons/hi';
 import { registerApi } from '../../../api/auth.api';
 import { getRoleRedirectPath, useAuth } from '../../../contexts/AuthContext';
+import { useToast } from '../../../contexts/ToastContext';
 
 const cardTheme = {
   root: {
@@ -49,6 +50,7 @@ const passwordRules = [
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated, isLoading, user } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [formState, setFormState] = useState<RegisterFormState>({
     username: '',
     email: '',
@@ -147,8 +149,11 @@ const RegisterPage = () => {
         password: formState.password,
       });
       await login(response.accessToken);
+      showSuccess('Account created successfully! Welcome!');
     } catch (error) {
-      setFormError(resolveErrorMessage(error));
+      const errorMsg = resolveErrorMessage(error);
+      setFormError(errorMsg);
+      showError(errorMsg);
     } finally {
       setIsSubmitting(false);
     }

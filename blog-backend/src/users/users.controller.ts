@@ -360,8 +360,20 @@ export class UsersController {
   async assignRole(
     @Param('id') userId: string,
     @Body() body: AssignRoleDto,
+    @CurrentUser() requester: { id: string; roles: string[] },
   ) {
-    const result = await this.usersService.assignRoleToUser(userId, body.role);
+    // Get highest role of requester
+    const requesterRole = requester.roles.includes('SUPERADMIN')
+      ? UserRole.SUPERADMIN
+      : requester.roles.includes('ADMIN')
+        ? UserRole.ADMIN
+        : UserRole.USER;
+        
+    const result = await this.usersService.assignRoleToUser(
+      userId,
+      body.role,
+      requesterRole,
+    );
     return {
       success: result.success,
       data: result.value,
@@ -418,8 +430,23 @@ export class UsersController {
     status: 403,
     description: 'Forbidden - Admin access required',
   })
-  async removeRole(@Param('id') userId: string, @Param('role') role: UserRole) {
-    const result = await this.usersService.removeRoleFromUser(userId, role);
+  async removeRole(
+    @Param('id') userId: string,
+    @Param('role') role: UserRole,
+    @CurrentUser() requester: { id: string; roles: string[] },
+  ) {
+    // Get highest role of requester
+    const requesterRole = requester.roles.includes('SUPERADMIN')
+      ? UserRole.SUPERADMIN
+      : requester.roles.includes('ADMIN')
+        ? UserRole.ADMIN
+        : UserRole.USER;
+        
+    const result = await this.usersService.removeRoleFromUser(
+      userId,
+      role,
+      requesterRole,
+    );
     return {
       success: result.success,
       data: result.value,
@@ -510,8 +537,18 @@ export class UsersController {
     status: 403,
     description: 'Forbidden - Admin access required',
   })
-  async deactivateUser(@Param('id') userId: string) {
-    const result = await this.usersService.deactivateUser(userId);
+  async deactivateUser(
+    @Param('id') userId: string,
+    @CurrentUser() requester: { id: string; roles: string[] },
+  ) {
+    // Get highest role of requester
+    const requesterRole = requester.roles.includes('SUPERADMIN')
+      ? UserRole.SUPERADMIN
+      : requester.roles.includes('ADMIN')
+        ? UserRole.ADMIN
+        : UserRole.USER;
+        
+    const result = await this.usersService.deactivateUser(userId, requesterRole);
     return {
       success: result.success,
       data: result.value,
@@ -613,11 +650,19 @@ export class UsersController {
   })
   async hardDeleteUser(
     @Param('id') userId: string,
-    @CurrentUser() requester: { id: string; username: string },
+    @CurrentUser() requester: { id: string; roles: string[] },
   ) {
+    // Get highest role of requester
+    const requesterRole = requester.roles.includes('SUPERADMIN')
+      ? UserRole.SUPERADMIN
+      : requester.roles.includes('ADMIN')
+        ? UserRole.ADMIN
+        : UserRole.USER;
+        
     const result = await this.usersService.hardDeleteUser(
       userId,
       requester.id,
+      requesterRole,
     );
     return {
       success: result.success,

@@ -13,12 +13,16 @@ import {
   TableHead,
   TableHeadCell,
   TableRow,
+  Tooltip,
 } from 'flowbite-react';
 import axios from 'axios';
+import { HiLockClosed } from 'react-icons/hi';
 import AdminTableWrapper from '../components/AdminTableWrapper';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 import RoleBadge from '../components/RoleBadge';
 import StatusBadge from '../components/StatusBadge';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useToast } from '../../../contexts/ToastContext';
 import {
   assignUserRole,
   activateUser,
@@ -114,10 +118,27 @@ const resolveErrorMessage = (err: unknown) => {
 };
 
 const UsersPage = () => {
+  const { user: currentUser } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Check if current user is SUPERADMIN
+  const isSuperAdmin = useMemo(
+    () => currentUser?.roles?.includes('SUPERADMIN') ?? false,
+    [currentUser?.roles],
+  );
+
+  // Roles that current user can assign/remove
+  const allowedRoles = useMemo(() => {
+    if (isSuperAdmin) {
+      return roles; // SUPERADMIN can manage all roles
+    }
+    // ADMIN can only manage USER and AUTHOR roles
+    return roles.filter((role) => role === 'USER' || role === 'AUTHOR');
+  }, [isSuperAdmin, roles]);
   const [success, setSuccess] = useState<string | null>(null);
   const [roleModalUser, setRoleModalUser] = useState<UserRecord | null>(null);
   const [roleSelection, setRoleSelection] = useState<string[]>([]);
@@ -183,8 +204,10 @@ const UsersPage = () => {
       await loadUsers();
       setRoleModalUser(null);
       setSuccess('User roles updated successfully.');
+      showSuccess('User roles updated successfully.');
     } catch (err) {
       setRoleModalError(resolveErrorMessage(err));
+      showError(resolveErrorMessage(err));
     } finally {
       setIsRoleSaving(false);
     }
@@ -202,17 +225,20 @@ const UsersPage = () => {
       if (confirmAction.type === 'deactivate') {
         await deactivateUser(confirmAction.user.id);
         setSuccess('User deactivated successfully.');
+        showSuccess('User deactivated successfully.');
       }
 
       if (confirmAction.type === 'hardDelete') {
         await hardDeleteUser(confirmAction.user.id);
         setSuccess('User permanently deleted.');
+        showSuccess('User permanently deleted.');
       }
 
       await loadUsers();
       setConfirmAction(null);
     } catch (err) {
       setError(resolveErrorMessage(err));
+      showError(resolveErrorMessage(err));
     } finally {
       setIsActionLoading(false);
     }
@@ -226,12 +252,44 @@ const UsersPage = () => {
       await activateUser(userId);
       await loadUsers();
       setSuccess('User activated successfully.');
+      showSuccess('User activated successfully.');
     } catch (err) {
       setError(resolveErrorMessage(err));
+      showError(resolveErrorMessage(err));
     } finally {
       setActivatingUserId(null);
     }
   };
+
+  // Count active SUPERADMINs to prevent deleting/deactivating the last one
+  const activeSuperAdminCount = useMemo(
+    () =>
+      users.filter(
+        (u) => u.isActive && u.roles.includes('SUPERADMIN'),
+      ).length,
+    [users],
+  );
+
+  // Check if a user can be deactivated/deleted based on role hierarchy
+  const canModifyUser = useCallback(
+    (targetUser: UserRecord) => {
+      const targetIsAdmin = targetUser.roles.includes('ADMIN');
+      const targetIsSuperAdmin = targetUser.roles.includes('SUPERADMIN');
+
+      // ADMIN cannot modify other ADMIN or SUPERADMIN users
+      if (!isSuperAdmin && (targetIsAdmin || targetIsSuperAdmin)) {
+        return { allowed: false, reason: 'ADMIN cannot manage users with ADMIN or SUPERADMIN roles' };
+      }
+
+      // Prevent modifying the last SUPERADMIN
+      if (targetIsSuperAdmin && activeSuperAdminCount <= 1) {
+        return { allowed: false, reason: 'Cannot modify the last SUPERADMIN' };
+      }
+
+      return { allowed: true, reason: '' };
+    },
+    [isSuperAdmin, activeSuperAdminCount],
+  );
 
   const confirmContent = useMemo(() => {
     if (!confirmAction) {
@@ -335,17 +393,36 @@ const UsersPage = () => {
                             </span>
                           </Button>
                           {user.isActive ? (
-                            <Button
-                              color="light"
-                              size="xs"
-                              className={deactivateButtonClass}
-                              onClick={() => setConfirmAction({ type: 'deactivate', user })}
-                            >
-                              <span className="flex items-center gap-1.5">
-                                <PowerIcon />
-                                Deactivate
-                              </span>
-                            </Button>
+                            (() => {
+                              const modifyCheck = canModifyUser(user);
+                              return (
+                                <Tooltip
+                                  className="text-color black"
+                                  content={
+                                    !modifyCheck.allowed
+                                      ? modifyCheck.reason
+                                      : 'Deactivate user'
+                                  }
+                                >
+                                  <Button
+                                    color="light"
+                                    size="xs"
+                                    className={`${deactivateButtonClass} ${!modifyCheck.allowed ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    onClick={() =>
+                                      modifyCheck.allowed &&
+                                      setConfirmAction({ type: 'deactivate', user })
+                                    }
+                                    disabled={!modifyCheck.allowed}
+                                  >
+                                    <span className="flex items-center gap-1.5">
+                                      {!modifyCheck.allowed && <HiLockClosed className="h-3 w-3" />}
+                                      <PowerIcon />
+                                      Deactivate
+                                    </span>
+                                  </Button>
+                                </Tooltip>
+                              );
+                            })()
                           ) : (
                             <Button
                               color="light"
@@ -360,17 +437,36 @@ const UsersPage = () => {
                               </span>
                             </Button>
                           )}
-                          <Button
-                            color="light"
-                            size="xs"
-                            className={deleteButtonClass}
-                            onClick={() => setConfirmAction({ type: 'hardDelete', user })}
-                          >
-                            <span className="flex items-center gap-1.5">
-                              <TrashIcon />
-                              Hard delete
-                            </span>
-                          </Button>
+                          {(() => {
+                            const modifyCheck = canModifyUser(user);
+                            return (
+                              <Tooltip
+                                className="text-color black"
+                                content={
+                                  !modifyCheck.allowed
+                                    ? modifyCheck.reason
+                                    : 'Permanently delete user'
+                                }
+                              >
+                                <Button
+                                  color="light"
+                                  size="xs"
+                                  className={`${deleteButtonClass} ${!modifyCheck.allowed ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  onClick={() =>
+                                    modifyCheck.allowed &&
+                                    setConfirmAction({ type: 'hardDelete', user })
+                                  }
+                                  disabled={!modifyCheck.allowed}
+                                >
+                                  <span className="flex items-center gap-1.5">
+                                    {!modifyCheck.allowed && <HiLockClosed className="h-3 w-3" />}
+                                    <TrashIcon />
+                                    Hard delete
+                                  </span>
+                                </Button>
+                              </Tooltip>
+                            );
+                          })()}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -406,25 +502,49 @@ const UsersPage = () => {
                 </div>
               </div>
               <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Toggle roles
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    Toggle roles
+                  </p>
+                  {!isSuperAdmin && (
+                    <Tooltip content="Only SUPERADMIN can manage ADMIN and SUPERADMIN roles">
+                      <HiLockClosed className="h-3 w-3 text-slate-400" />
+                    </Tooltip>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {roles.length === 0 ? (
                     <span className="text-sm text-slate-500">No roles available.</span>
                   ) : (
                     roles.map((role) => {
                       const isSelected = roleSelection.includes(role);
+                      const canManageRole = allowedRoles.includes(role);
+                      const isRestrictedRole = role === 'ADMIN' || role === 'SUPERADMIN';
+                      
                       return (
-                        <Button
+                        <Tooltip className='text-color black'
                           key={role}
-                          color="light"
-                          size="xs"
-                          className={isSelected ? roleToggleActive : roleToggleInactive}
-                          onClick={() => toggleRole(role)}
+                          content={
+                            !canManageRole
+                              ? 'Only SUPERADMIN can manage this role'
+                              : isSelected
+                                ? 'Click to remove'
+                                : 'Click to assign'
+                          }
                         >
-                          {role}
-                        </Button>
+                          <Button
+                            color="light"
+                            size="xs"
+                            className={`${isSelected ? roleToggleActive : roleToggleInactive} ${!canManageRole ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            onClick={() => canManageRole && toggleRole(role)}
+                            disabled={!canManageRole}
+                          >
+                            {!canManageRole && isRestrictedRole && (
+                              <HiLockClosed className="mr-1 h-3 w-3" />
+                            )}
+                            {role}
+                          </Button>
+                        </Tooltip>
                       );
                     })
                   )}

@@ -767,10 +767,10 @@ export class ArticlesService {
       dto.category = categoryDto;
     }
 
-    // Map tags
+    // Map tags (exclude deleted tags)
     if (article.articleTags && article.articleTags.length > 0) {
       dto.tags = article.articleTags
-        .filter((at) => at.tag) // Ensure tag exists
+        .filter((at) => at.tag && !at.tag.isDeleted) // Ensure tag exists and is not deleted
         .map((at) => {
           const tagDto = new TagResponseDto();
           tagDto.id = at.tag.id;

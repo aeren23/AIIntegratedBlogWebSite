@@ -3,11 +3,13 @@ import { Outlet, Link } from 'react-router-dom';
 import { Badge, Button } from 'flowbite-react';
 import { HiSparkles } from 'react-icons/hi';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import AdminSidebar from './AdminSidebar';
 import ConfirmModal from '../components/common/ConfirmModal';
 
 const AdminLayout = () => {
     const { user, logout } = useAuth();
+    const { showSuccess } = useToast();
     const [isLogoutOpen, setIsLogoutOpen] = useState(false);
 
     return (
@@ -93,6 +95,7 @@ const AdminLayout = () => {
                     onConfirm={() => {
                         setIsLogoutOpen(false);
                         logout();
+                        showSuccess('Logged out successfully!');
                     }}
                     onCancel={() => setIsLogoutOpen(false)}
                 />

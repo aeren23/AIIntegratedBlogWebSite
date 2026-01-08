@@ -5,6 +5,7 @@ import { useParams } from 'react-router-dom';
 import AdminTableWrapper from '../components/AdminTableWrapper';
 import CommentSkeleton from '../../../components/comments/CommentSkeleton';
 import CommentTree from '../../../components/comments/CommentTree';
+import { useToast } from '../../../contexts/ToastContext';
 import {
   deleteComment,
   fetchCommentsByArticle,
@@ -28,6 +29,7 @@ const resolveErrorMessage = (err: unknown) => {
 
 const ArticleCommentsPage = () => {
   const { articleId } = useParams<{ articleId: string }>();
+  const { showSuccess, showError } = useToast();
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,16 +85,22 @@ const ArticleCommentsPage = () => {
               try {
                 await deleteComment(commentId);
                 await loadComments();
+                showSuccess('Comment deleted successfully!');
               } catch (err) {
-                setError(resolveErrorMessage(err));
+                const errorMsg = resolveErrorMessage(err);
+                setError(errorMsg);
+                showError(errorMsg);
               }
             }}
             onHardDelete={async (commentId) => {
               try {
                 await hardDeleteComment(commentId);
                 await loadComments();
+                showSuccess('Comment permanently deleted!');
               } catch (err) {
-                setError(resolveErrorMessage(err));
+                const errorMsg = resolveErrorMessage(err);
+                setError(errorMsg);
+                showError(errorMsg);
               }
             }}
           />

@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { HiOutlineCamera } from 'react-icons/hi';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useToast } from '../../../contexts/ToastContext';
 import { resolveApiAssetUrl } from '../../../utils/apiAssets';
 import {
   createMyProfile,
@@ -54,6 +55,7 @@ const formatDate = (value?: string | null) => {
 
 const Profile = () => {
   const { user, logout } = useAuth();
+  const { showSuccess, showError } = useToast();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -116,9 +118,13 @@ const Profile = () => {
         displayName: saved.displayName ?? '',
         bio: saved.bio ?? '',
       });
-      setSuccess(profile ? 'Profile updated successfully.' : 'Profile created successfully.');
+      const successMsg = profile ? 'Profile updated successfully.' : 'Profile created successfully.';
+      setSuccess(successMsg);
+      showSuccess(successMsg);
     } catch (err) {
-      setError(resolveErrorMessage(err));
+      const errorMsg = resolveErrorMessage(err);
+      setError(errorMsg);
+      showError(errorMsg);
     } finally {
       setIsSaving(false);
     }
@@ -149,8 +155,11 @@ const Profile = () => {
         });
       }
       setSuccess('Avatar updated successfully.');
+      showSuccess('Avatar updated successfully.');
     } catch (err) {
-      setError(resolveErrorMessage(err));
+      const errorMsg = resolveErrorMessage(err);
+      setError(errorMsg);
+      showError(errorMsg);
     } finally {
       setIsUploading(false);
     }
@@ -163,10 +172,13 @@ const Profile = () => {
 
     try {
       await deleteSelfAccount();
+      showSuccess('Account deactivated successfully.');
       logout();
       navigate('/login', { replace: true });
     } catch (err) {
-      setError(resolveErrorMessage(err));
+      const errorMsg = resolveErrorMessage(err);
+      setError(errorMsg);
+      showError(errorMsg);
     } finally {
       setIsDeactivating(false);
       setIsDeactivateOpen(false);

@@ -20,6 +20,7 @@ import axios from 'axios';
 import AdminTableWrapper from '../components/AdminTableWrapper';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 import StatusBadge from '../components/StatusBadge';
+import { useToast } from '../../../contexts/ToastContext';
 import {
   createCategory,
   deleteCategory,
@@ -77,6 +78,7 @@ const resolveErrorMessage = (err: unknown) => {
 };
 
 const CategoriesPage = () => {
+  const { showSuccess, showError } = useToast();
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -139,6 +141,7 @@ const CategoriesPage = () => {
           prev.map((item) => (item.id === updated.id ? { ...updated } : item))
         );
         setSuccess('Category updated successfully.');
+        showSuccess('Category updated successfully.');
       } else {
         const created = await createCategory({
           name: formState.name.trim(),
@@ -146,10 +149,12 @@ const CategoriesPage = () => {
         });
         setCategories((prev) => [{ ...created, isDeleted: false }, ...prev]);
         setSuccess('Category created successfully.');
+        showSuccess('Category created successfully.');
       }
       setIsModalOpen(false);
     } catch (err) {
       setFormError(resolveErrorMessage(err));
+      showError(resolveErrorMessage(err));
     } finally {
       setIsSaving(false);
     }
@@ -170,8 +175,10 @@ const CategoriesPage = () => {
       );
       setConfirmDelete(null);
       setSuccess('Category deleted successfully.');
+      showSuccess('Category deleted successfully.');
     } catch (err) {
       setError(resolveErrorMessage(err));
+      showError(resolveErrorMessage(err));
     }
   };
 
