@@ -807,6 +807,10 @@ Platform, Google Gemini yapay zeka modelini kullanarak makale özetleri üretebi
 - Okuyucular, makale detay sayfasında özeti görüntüleyebilir
 - SEO amaçlı meta açıklamaları için kullanılabilir
 
+![Makale Editöründe AI Özet Üretimi](./ProjectImages/AISummary.png)
+
+*Şekil 12.1: Makale editöründe Google Gemini ile otomatik özet üretimi*
+
 ### 12.3 Teknik Uygulama
 
 Yapay zeka entegrasyonu, ayrı bir modül olarak tasarlanmıştır. Bu modüler yaklaşım, gelecekte farklı AI sağlayıcılarına geçişi kolaylaştırmaktadır.
@@ -849,7 +853,7 @@ Proje, geliştirme ve üretim ortamları için ayrı yapılandırmalar desteklem
 
 Proje, herkese açık bir URL üzerinden erişilebilir durumdadır:
 
-**Proje URL:** [CANLI PROJE LINKI BURAYA EKLENECEK]
+**Proje URL:** https://github.com/aeren23/AIIntegratedBlogWebSite
 
 ---
 
@@ -965,4 +969,4 @@ AI Blog Platform projesi, modern full-stack web geliştirme pratiklerinin başar
 
 ---
 
-**📌 RAPOR SONU**
+**RAPOR SONU**
