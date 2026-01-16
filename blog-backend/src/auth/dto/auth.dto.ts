@@ -71,6 +71,7 @@ export class AuthResponseDto {
       username: 'johndoe',
       email: 'john@example.com',
       roles: ['USER'],
+      emailVerified: true,
     },
   })
   user: {
@@ -78,5 +79,6 @@ export class AuthResponseDto {
     username: string;
     email: string;
     roles: string[];
+    emailVerified?: boolean;
   };
 }

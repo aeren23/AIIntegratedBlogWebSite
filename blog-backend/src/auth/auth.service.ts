@@ -119,6 +119,7 @@ export class AuthService {
           username: user.username,
           email: user.email,
           roles: [UserRole.USER],
+          emailVerified: false,
         },
       });
     } catch (error) {
@@ -184,6 +185,7 @@ export class AuthService {
         username: user.username,
         email: user.email,
         roles,
+        emailVerified: user.emailVerified,
       },
     });
   }

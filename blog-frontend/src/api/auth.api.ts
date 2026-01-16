@@ -5,6 +5,7 @@ export type AuthUser = {
   username: string;
   email: string;
   roles: string[];
+  emailVerified?: boolean;
 };
 
 export type AuthResponse = {
