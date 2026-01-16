@@ -25,10 +25,10 @@ export class User extends BaseEntity {
   @Column({ default: false })
   emailVerified: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   emailVerificationToken: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   emailVerificationExpiry: Date | null;
 
   @OneToMany(() => UserRole, (userRole) => userRole.user)
