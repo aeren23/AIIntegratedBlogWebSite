@@ -32,3 +32,8 @@ export const registerApi = async (payload: RegisterPayload) => {
   const { data } = await api.post<ApiResponse<AuthResponse>>('/auth/register', payload);
   return unwrapApiResponse(data);
 };
+
+export const resendVerificationEmailApi = async (email: string) => {
+  const { data } = await api.post<ApiResponse<{ message: string }>>('/auth/resend-verification', { email });
+  return unwrapApiResponse(data);
+};

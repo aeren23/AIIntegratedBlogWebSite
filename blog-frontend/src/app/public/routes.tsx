@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage';
 import CategoriesPage from './pages/CategoriesPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import NotFoundPage from './pages/NotFoundPage';
 import RoleGuard from '../../guards/RoleGuard';
@@ -74,6 +75,7 @@ const publicRoutes = [
   />,
   <Route path="login" element={<LoginPage />} key="public-login" />,
   <Route path="register" element={<RegisterPage />} key="public-register" />,
+  <Route path="verify-email" element={<VerifyEmailPage />} key="public-verify-email" />,
   <Route
     path="profile"
     element={

@@ -3,7 +3,7 @@ import { Alert, Button, Card, Label, Spinner, TextInput } from 'flowbite-react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { HiCheck, HiX } from 'react-icons/hi';
-import { registerApi } from '../../../api/auth.api';
+import { registerApi, resendVerificationEmailApi } from '../../../api/auth.api';
 import { getRoleRedirectPath, useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 
@@ -60,6 +60,8 @@ const RegisterPage = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<keyof RegisterFormState, boolean>>>({});
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   const redirectPath = useMemo(
     () => (user ? getRoleRedirectPath(user.roles) : '/'),
@@ -111,6 +113,18 @@ const RegisterPage = () => {
   const isEmailValid = validateEmail(formState.email);
   const usernameValidation = validateUsername(formState.username);
 
+  const handleResendVerification = async () => {
+    setIsResending(true);
+    try {
+      await resendVerificationEmailApi(formState.email);
+      showSuccess('Verification email sent! Please check your inbox.');
+    } catch {
+      showError('Failed to resend verification email. Please try again later.');
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFormError(null);
@@ -149,7 +163,8 @@ const RegisterPage = () => {
         password: formState.password,
       });
       await login(response.accessToken);
-      showSuccess('Account created successfully! Welcome!');
+      setRegistrationSuccess(true);
+      showSuccess('Account created successfully! Please check your email to verify your account.');
     } catch (error) {
       const errorMsg = resolveErrorMessage(error);
       setFormError(errorMsg);
@@ -169,6 +184,42 @@ const RegisterPage = () => {
 
   if (isAuthenticated && user) {
     return null;
+  }
+
+  if (registrationSuccess) {
+    return (
+      <div className="mx-auto flex w-full max-w-md flex-col gap-6">
+        <Card theme={cardTheme} className="border-gray-100 !bg-white">
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-gray-800">Check Your Email</h2>
+            <Alert color="success">
+              <span className="font-medium">Registration successful!</span>
+            </Alert>
+            <p className="text-sm text-gray-600">
+              We've sent a verification email to <strong>{formState.email}</strong>. 
+              Please check your inbox and click the verification link to activate your account.
+            </p>
+            <p className="text-sm text-gray-500">
+              The verification link will expire in 24 hours. If you don't see the email, check your spam folder.
+            </p>
+            <div className="flex gap-3 mt-4">
+              <Button color="teal" onClick={() => navigate('/articles')}>
+                Continue to Site
+              </Button>
+              <Button 
+                color="gray" 
+                outline 
+                onClick={handleResendVerification} 
+                disabled={isResending}
+              >
+                {isResending ? <Spinner size="sm" className="mr-2" /> : null}
+                Resend Email
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
   }
 
   return (
