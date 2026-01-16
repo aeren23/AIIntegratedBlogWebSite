@@ -1,5 +1,5 @@
-import { Controller, Post, Body, Get, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Post, Body, Get, UseGuards, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto, AuthResponseDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -129,6 +129,87 @@ export class AuthController {
       success: true,
       data: user,
       errorMessage: null,
+    };
+  }
+
+  @Get('verify-email')
+  @ApiOperation({
+    summary: 'Verify email address',
+    description: 'Verify user email address with the token sent via email',
+  })
+  @ApiQuery({
+    name: 'token',
+    description: 'Email verification token',
+    required: true,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verified successfully',
+    schema: {
+      example: {
+        success: true,
+        data: {
+          message: 'Email verified successfully',
+        },
+        errorMessage: null,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid or expired token',
+    schema: {
+      example: {
+        success: false,
+        data: null,
+        errorMessage: 'Invalid verification token',
+      },
+    },
+  })
+  async verifyEmail(@Query('token') token: string) {
+    const result = await this.authService.verifyEmail(token);
+    return {
+      success: result.success,
+      data: result.value,
+      errorMessage: result.errorMessage,
+    };
+  }
+
+  @Post('resend-verification')
+  @ApiOperation({
+    summary: 'Resend verification email',
+    description: 'Resend the email verification link to the user',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification email sent',
+    schema: {
+      example: {
+        success: true,
+        data: {
+          message: 'Verification email sent successfully',
+        },
+        errorMessage: null,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'User not found or email already verified',
+    schema: {
+      example: {
+        success: false,
+        data: null,
+        errorMessage: 'Email already verified',
+      },
+    },
+  })
+  async resendVerification(@Body() body: { email: string }) {
+    const result = await this.authService.resendVerificationEmail(body.email);
+    return {
+      success: result.success,
+      data: result.value,
+      errorMessage: result.errorMessage,
     };
   }
 }

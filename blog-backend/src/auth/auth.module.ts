@@ -12,11 +12,13 @@ import { RolesGuard } from './guards/roles.guard';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { LogsModule } from '../logs/logs.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Role, UserRole]),
     LogsModule,
+    EmailModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     // JwtModule.registerAsync allows us to inject ConfigService
     JwtModule.registerAsync({

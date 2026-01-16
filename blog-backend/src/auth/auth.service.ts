@@ -12,6 +12,8 @@ import { JwtPayload } from './strategies/jwt.strategy';
 import { LogService } from '../logs/log.service';
 import { LogAction } from '../common/enums/log-action.enum';
 import { UserRole } from './enums/user-role.enum';
+import { EmailService } from '../email/email.service';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -20,6 +22,7 @@ export class AuthService {
     private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
     private readonly logService: LogService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -47,6 +50,11 @@ export class AuthService {
       const saltRounds = 10;
       const passwordHash = await bcrypt.hash(dto.password, saltRounds);
 
+      // Generate email verification token
+      const verificationToken = randomBytes(32).toString('hex');
+      const verificationExpiry = new Date();
+      verificationExpiry.setHours(verificationExpiry.getHours() + 24); // Token expires in 24 hours
+
       const user = await this.userRepository.manager.transaction(
         async (manager) => {
           const userRepo = manager.getRepository(User);
@@ -58,6 +66,9 @@ export class AuthService {
             email: dto.email,
             passwordHash,
             isActive: true,
+            emailVerified: false,
+            emailVerificationToken: verificationToken,
+            emailVerificationExpiry: verificationExpiry,
           });
           await userRepo.save(createdUser);
 
@@ -78,6 +89,18 @@ export class AuthService {
           return createdUser;
         },
       );
+
+      // Send verification email
+      try {
+        await this.emailService.sendVerificationEmail(
+          user.email,
+          verificationToken,
+          user.username,
+        );
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError);
+        // Continue with registration even if email fails
+      }
 
       // Generate JWT token
       const token = this.generateToken(user, [UserRole.USER]);
@@ -186,5 +209,81 @@ export class AuthService {
       where: { id: userId, isActive: true, isDeleted: false },
     });
     return user;
+  }
+
+  /**
+   * Verify user email with token
+   */
+  async verifyEmail(token: string): Promise<ServiceResponse<{ message: string }>> {
+    const user = await this.userRepository.findOne({
+      where: { emailVerificationToken: token },
+    });
+
+    if (!user) {
+      return ServiceResponse.fail('Invalid verification token');
+    }
+
+    if (user.emailVerified) {
+      return ServiceResponse.fail('Email already verified');
+    }
+
+    if (!user.emailVerificationExpiry || new Date() > user.emailVerificationExpiry) {
+      return ServiceResponse.fail('Verification token has expired');
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationToken = null;
+    user.emailVerificationExpiry = null;
+    await this.userRepository.save(user);
+
+    void this.logService.createLog({
+      userId: user.id,
+      action: LogAction.UPDATE,
+      entityType: 'User',
+      entityId: user.id,
+      description: 'Email verified',
+    });
+
+    return ServiceResponse.ok({ message: 'Email verified successfully' });
+  }
+
+  /**
+   * Resend verification email
+   */
+  async resendVerificationEmail(email: string): Promise<ServiceResponse<{ message: string }>> {
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    if (!user) {
+      return ServiceResponse.fail('User not found');
+    }
+
+    if (user.emailVerified) {
+      return ServiceResponse.fail('Email already verified');
+    }
+
+    // Generate new verification token
+    const verificationToken = randomBytes(32).toString('hex');
+    const verificationExpiry = new Date();
+    verificationExpiry.setHours(verificationExpiry.getHours() + 24);
+
+    user.emailVerificationToken = verificationToken;
+    user.emailVerificationExpiry = verificationExpiry;
+    await this.userRepository.save(user);
+
+    // Send verification email
+    try {
+      await this.emailService.sendVerificationEmail(
+        user.email,
+        verificationToken,
+        user.username,
+      );
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      return ServiceResponse.fail('Failed to send verification email');
+    }
+
+    return ServiceResponse.ok({ message: 'Verification email sent successfully' });
   }
 }

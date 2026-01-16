@@ -22,6 +22,15 @@ export class User extends BaseEntity {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ default: false })
+  emailVerified: boolean;
+
+  @Column({ nullable: true })
+  emailVerificationToken: string | null;
+
+  @Column({ nullable: true })
+  emailVerificationExpiry: Date | null;
+
   @OneToMany(() => UserRole, (userRole) => userRole.user)
   userRoles: UserRole[];
 
