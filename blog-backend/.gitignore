@@ -25,6 +25,9 @@ logs
 *.log
 npm-debug.log*
 
+# But keep the logs module source code
+!/src/logs
+
 # Test coverage
 /coverage
 
