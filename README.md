@@ -8,6 +8,7 @@ A full-stack modern blog platform built with **NestJS** and **React**, featuring
 
 - [Overview](#overview)
 - [Features](#features)
+- [Screenshots](#screenshots)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
 - [Getting Started](#getting-started)
@@ -33,7 +34,7 @@ AI-Integrated Blog Website is a comprehensive blogging platform designed for wri
 - 🤖 **AI-Powered**:  Integrated with Google Gemini AI for content generation and assistance
 - 🔐 **Secure**: JWT-based authentication with role-based access control
 - 📝 **Rich Editor**:  WYSIWYG editor with markdown support and syntax highlighting
-- 👥 **Multi-Role**: Support for USER, AUTHOR, ADMIN, and SUPERADMIN roles
+- 👥 **Multi-Role**:  Support for USER, AUTHOR, ADMIN, and SUPERADMIN roles
 - 🎨 **Modern UI**: Beautiful, responsive interface built with Tailwind CSS and Flowbite React
 - 📊 **Admin Dashboard**: Comprehensive admin panel for content and user management
 - 🔍 **Organized Content**: Categories and tags for better content organization
@@ -52,7 +53,7 @@ AI-Integrated Blog Website is a comprehensive blogging platform designed for wri
 
 ### User Management
 - 👤 **User Registration & Login**:  Secure authentication system
-- 🎭 **Role-Based Access**: Four-tier role system (USER, AUTHOR, ADMIN, SUPERADMIN)
+- 🎭 **Role-Based Access**:  Four-tier role system (USER, AUTHOR, ADMIN, SUPERADMIN)
 - 👥 **User Profiles**:  Customizable user profiles with avatars
 - 📊 **Activity Logs**: Track user actions and system events
 
@@ -62,11 +63,47 @@ AI-Integrated Blog Website is a comprehensive blogging platform designed for wri
 - 🔌 **Provider Architecture**: Pluggable AI provider system (OpenAI, Gemini)
 
 ### Security & Performance
-- 🔒 **JWT Authentication**:  Secure token-based authentication
-- 🛡️ **Guards & Decorators**: Robust authorization with NestJS guards
+- 🔒 **JWT Authentication**: Secure token-based authentication
+- 🛡️ **Guards & Decorators**:  Robust authorization with NestJS guards
 - ✅ **Input Validation**: Class-validator for request validation
 - 🗄️ **SQLite Database**: Lightweight, serverless database with TypeORM
 - 🚀 **Optimized Frontend**: Vite for fast development and builds
+
+---
+
+## 📸 Screenshots
+
+### Landing Page
+The modern, responsive landing page welcomes users with feature highlights and quick access to authentication.
+
+![Landing Page](./ProjectImages/Mainpage.png)
+
+### Authentication System
+Secure user registration and login with validation and error handling. 
+
+<div style="display: flex; gap:  10px;">
+  <img src="./ProjectImages/LoginPage.png" alt="Login Page" width="49%" />
+  <img src="./ProjectImages/RegisterPage.png" alt="Register Page" width="49%" />
+</div>
+
+### Author Dashboard & Article Editor
+Authors can create, edit, and manage their articles with a powerful rich text editor powered by Toast UI Editor.
+
+![Author Panel](./ProjectImages/AuthorPanel.png)
+
+![Article Editor](./ProjectImages/ArticleEditorPage.png)
+
+### Comment System
+Interactive commenting system allows readers to engage with articles and authors.
+
+![Comment System](./ProjectImages/CommentStructure.png)
+
+### Admin Dashboard
+Comprehensive admin panel for managing users, roles, articles, categories, and system logs.
+
+![Admin Dashboard](./ProjectImages/AdminDashboard.png)
+
+![User Management](./ProjectImages/UserManagementPage.png)
 
 ---
 
@@ -130,11 +167,25 @@ AI-Integrated Blog Website is a comprehensive blogging platform designed for wri
 │      JWT Guard         TypeORM           Gemini AI          │
 │           │                │                                │
 │  ┌────────────────────────────────────────────────────┐    │
-│  │              SQLite Database (blog. db)             │    │
+│  │              SQLite Database (blog. db)              │    │
 │  │   Users | Roles | Articles | Comments | Logs      │    │
 │  └────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### Database Entity-Relationship Diagram
+
+The application uses a well-structured relational database with 11 tables supporting complex relationships including one-to-many, many-to-many, and cascading operations.
+
+![Database ER Diagram](./ProjectImages/DBDiagramBlog.png)
+
+**Key Entity Relationships:**
+- **Users** ↔ **Roles**:  Many-to-many relationship through UserRole join table
+- **Articles** ↔ **Tags**: Many-to-many relationship through ArticleTag join table
+- **Users** → **Articles**: One-to-many (author relationship)
+- **Articles** → **Images**: One-to-many (article images)
+- **Articles** → **Comments**: One-to-many with cascade delete
+- **Categories** → **Articles**: One-to-many relationship
 
 ### Backend Module Structure
 
@@ -158,7 +209,7 @@ blog-backend/src/
 │   │   └── openai.provider.ts
 │   └── interfaces/    # AI client interface
 ├── common/            # Shared utilities & DTOs
-└── database/          # Database utilities
+└── database/          # Database utilities & seeding
 ```
 
 ### Frontend Structure
@@ -195,7 +246,7 @@ Before you begin, ensure you have the following installed:
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/aeren23/AIIntegratedBlogWebSite.git
+git clone https://github.com/aeren23/AIIntegratedBlogWebSite. git
 cd AIIntegratedBlogWebSite
 ```
 
@@ -215,7 +266,7 @@ npm install
 
 ### Environment Variables
 
-Create a `.env` file in the **root directory** (one level above blog-backend/blog-frontend) with the following variables: 
+Create a `.env` file in the **root directory** (one level above blog-backend/blog-frontend) with the following variables:
 
 ```env
 # JWT Configuration
@@ -242,7 +293,7 @@ PORT=3000
 
 ```bash
 cd blog-backend
-npm run start: dev
+npm run start:dev
 ```
 
 The backend will start at `http://localhost:3000`
@@ -291,7 +342,7 @@ AIIntegratedBlogWebSite/
 │   │   ├── categories/     # Category management
 │   │   ├── comments/       # Comments system
 │   │   ├── common/         # Shared utilities
-│   │   ├── database/       # Database utilities
+│   │   ├── database/       # Database utilities & seeding
 │   │   ├── images/         # Image management
 │   │   ├── logs/           # Activity logs
 │   │   ├── roles/          # Role management
@@ -321,8 +372,20 @@ AIIntegratedBlogWebSite/
 │   ├── package.json
 │   └── vite.config.ts
 │
+├── ProjectImages/          # Project screenshots and diagrams
+│   ├── AdminDashboard.png
+│   ├── ArticleEditorPage.png
+│   ├── AuthorPanel.png
+│   ├── CommentStructure.png
+│   ├── DBDiagramBlog.png
+│   ├── LoginPage.png
+│   ├── Mainpage.png
+│   ├── RegisterPage.png
+│   └── UserManagementPage.png
+│
 ├── . env                    # Environment variables
 ├── .gitignore
+├── RAPOR.md                # Turkish project report
 └── README.md               # This file
 ```
 
@@ -364,6 +427,8 @@ http://localhost:3000/api/docs
 #### AI
 - `GET /api/ai/test? prompt=your-prompt` - Test AI integration
 
+**Total API Endpoints**:  47 across 9 modules
+
 ---
 
 ## 🔐 Authentication & Authorization
@@ -400,7 +465,7 @@ getProtectedData() {
 }
 ```
 
-**RolesGuard**:  Checks if user has required role(s)
+**RolesGuard**: Checks if user has required role(s)
 
 ```typescript
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -426,7 +491,7 @@ getProfile(@CurrentUser() user: JwtPayload) {
 
 ### Google Gemini AI
 
-The application integrates with **Google Gemini AI** for content generation and assistance. 
+The application integrates with **Google Gemini AI** for content generation and assistance.
 
 #### Configuration
 
@@ -450,7 +515,7 @@ export class GeminiClient implements AiClient {
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
-    return response. text;
+    return response.text;
   }
 }
 ```
@@ -492,11 +557,11 @@ The application implements a **4-tier role system**:
 ### Default Admin Account
 
 On first run, a default admin account is created: 
-- **Username**:  `admin`
+- **Username**: `admin`
 - **Email**: `admin@example.com`
 - **Password**: Check the console logs or database
 
-**⚠️ Important**:  Change the default admin password after first login!
+**⚠️ Important**: Change the default admin password after first login!
 
 ---
 
@@ -628,7 +693,7 @@ npm run start:dev  # Will recreate automatically
 **5. Module not found**
 ```bash
 # Reinstall dependencies
-rm -rf node_modules package-lock.json
+rm -rf node_modules package-lock. json
 npm install
 ```
 
