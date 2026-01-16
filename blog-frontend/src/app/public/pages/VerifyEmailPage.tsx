@@ -33,7 +33,7 @@ const VerifyEmailPage = () => {
       }
 
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/auth/verify-email?token=${token}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/auth/verify-email?token=${encodeURIComponent(token)}`);
         
         if (response.data.success) {
           setVerificationResult({

@@ -51,9 +51,7 @@ export class AuthService {
       const passwordHash = await bcrypt.hash(dto.password, saltRounds);
 
       // Generate email verification token
-      const verificationToken = randomBytes(32).toString('hex');
-      const verificationExpiry = new Date();
-      verificationExpiry.setHours(verificationExpiry.getHours() + 24); // Token expires in 24 hours
+      const { token: verificationToken, expiry: verificationExpiry } = this.generateVerificationToken();
 
       const user = await this.userRepository.manager.transaction(
         async (manager) => {
@@ -98,7 +96,13 @@ export class AuthService {
           user.username,
         );
       } catch (emailError) {
-        console.error('Failed to send verification email:', emailError);
+        void this.logService.createLog({
+          userId: user.id,
+          action: LogAction.CREATE,
+          entityType: 'User',
+          entityId: user.id,
+          description: 'Failed to send verification email',
+        });
         // Continue with registration even if email fails
       }
 
@@ -123,7 +127,12 @@ export class AuthService {
         },
       });
     } catch (error) {
-      console.error('Registration error:', error);
+      void this.logService.createLog({
+        action: LogAction.CREATE,
+        entityType: 'User',
+        entityId: 'unknown',
+        description: `Registration error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      });
       const errorMessage =
         error instanceof Error && error.message === 'Default role USER not found'
           ? error.message
@@ -266,9 +275,7 @@ export class AuthService {
     }
 
     // Generate new verification token
-    const verificationToken = randomBytes(32).toString('hex');
-    const verificationExpiry = new Date();
-    verificationExpiry.setHours(verificationExpiry.getHours() + 24);
+    const { token: verificationToken, expiry: verificationExpiry } = this.generateVerificationToken();
 
     user.emailVerificationToken = verificationToken;
     user.emailVerificationExpiry = verificationExpiry;
@@ -282,10 +289,26 @@ export class AuthService {
         user.username,
       );
     } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
+      void this.logService.createLog({
+        userId: user.id,
+        action: LogAction.UPDATE,
+        entityType: 'User',
+        entityId: user.id,
+        description: 'Failed to send verification email',
+      });
       return ServiceResponse.fail('Failed to send verification email');
     }
 
     return ServiceResponse.ok({ message: 'Verification email sent successfully' });
+  }
+
+  /**
+   * Generate email verification token and expiry
+   */
+  private generateVerificationToken(): { token: string; expiry: Date } {
+    const token = randomBytes(32).toString('hex');
+    const expiry = new Date();
+    expiry.setHours(expiry.getHours() + 24); // Token expires in 24 hours
+    return { token, expiry };
   }
 }

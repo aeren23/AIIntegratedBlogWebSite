@@ -25,6 +25,7 @@ export class User extends BaseEntity {
   @Column({ default: false })
   emailVerified: boolean;
 
+  @Index()
   @Column({ type: 'text', nullable: true })
   emailVerificationToken: string | null;
 
